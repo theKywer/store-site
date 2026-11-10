@@ -1,21 +1,34 @@
 
+import { Link } from 'react-router-dom'
+
 function Header({ cartCount }) {
+  function handleLogoClick() {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
+  }
+
   return (
     <header className="header">
-      <a href="/" className="logo">
+      <Link
+        to="/"
+        className="logo"
+        onClick={handleLogoClick}
+      >
         <span className="logo-icon">L</span>
         <span>LUNA MARKET</span>
-      </a>
+      </Link>
 
       <nav className="navigation">
-        <a href="#catalog">Каталог</a>
-        <a href="#discounts">Скидки</a>
-        <a href="#about">О нас</a>
+        <Link to="/#catalog">Каталог</Link>
+        <Link to="/#discounts">Скидки</Link>
+        <Link to="/#about">О нас</Link>
       </nav>
 
-      <button className="cart-button" type="button">
-        <span>Корзина ({cartCount})</span>
-      </button>
+      <Link to="/cart" className="cart-button">
+        Корзина ({cartCount})
+      </Link>
     </header>
   )
 }

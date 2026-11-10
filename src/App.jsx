@@ -1,62 +1,147 @@
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+
 import Header from './components/Header'
-import GameCard from './components/GameCard'
+import Footer from './components/Footer'
+import ScrollToTop from './components/ScrollToTop'
+
+import Home from './pages/Home'
+import CartPage from './pages/CartPage'
+import AboutPage from './pages/AboutPage'
+import SupportPage from './pages/SupportPage'
+import LegalPage from './pages/LegalPage'
+
 import games from './data/game'
 import './App.css'
 
 function App() {
-  const [cartCount, setCartCount] = useState(0)
+  const [cartItems, setCartItems] = useState(() => {
+    try {
+      const savedCart = localStorage.getItem('cartItems')
+
+      if (!savedCart) return []
+
+      const parsedCart = JSON.parse(savedCart)
+
+      if (!Array.isArray(parsedCart)) return []
+
+      return parsedCart.reduce((cart, item) => {
+        const game = item.game ?? item
+        const quantity = item.game
+          ? Math.max(1, Number(item.quantity) || 1)
+          : 1
+
+        const existingItem = cart.find(
+          (cartItem) => cartItem.game.id === game.id
+        )
+
+        if (existingItem) {
+          existingItem.quantity += quantity
+        } else {
+          cart.push({ game, quantity })
+        }
+
+        return cart
+      }, [])
+    } catch {
+      return []
+    }
+  })
+
+  useEffect(() => {
+    localStorage.setItem('cartItems', JSON.stringify(cartItems))
+  }, [cartItems])
+
+  function addToCart(game) {
+    setCartItems((currentItems) => {
+      const existingItem = currentItems.find(
+        (item) => item.game.id === game.id
+      )
+
+      if (existingItem) {
+        return currentItems.map((item) =>
+          item.game.id === game.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        )
+      }
+
+      return [...currentItems, { game, quantity: 1 }]
+    })
+  }
+
+  function increaseQuantity(gameId) {
+    setCartItems((currentItems) =>
+      currentItems.map((item) =>
+        item.game.id === gameId
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      )
+    )
+  }
+
+  function decreaseQuantity(gameId) {
+    setCartItems((currentItems) =>
+      currentItems
+        .map((item) =>
+          item.game.id === gameId
+            ? { ...item, quantity: item.quantity - 1 }
+            : item
+        )
+        .filter((item) => item.quantity > 0)
+    )
+  }
+
+  function removeFromCart(gameId) {
+    setCartItems((currentItems) =>
+      currentItems.filter((item) => item.game.id !== gameId)
+    )
+  }
+
+  const cartCount = cartItems.reduce(
+    (total, item) => total + item.quantity,
+    0
+  )
 
   return (
-    <>
+    <BrowserRouter>
+      <ScrollToTop />
+
       <Header cartCount={cartCount} />
 
       <main>
-        <section className="hero">
-          <div className="hero-content">
-            <span className="hero-label">ТВОЙ МИР ИГР</span>
-
-            <h1>
-              Открой для себя
-              <br />
-              <span>новые миры.</span>
-            </h1>
-
-            <p className="hero-description">
-              Игры, которые захватывают.
-              Истории, которые остаются с тобой.
-              Всё это — в Luna Market.
-            </p>
-
-            <a href="#catalog" className="primary-button">
-              Смотреть каталог
-              <span>→</span>
-            </a>
-          </div>
-        </section>
-
-        <section className="catalog-section" id="catalog">
-          <span className="section-label">
-            НАЧНИ СВОЁ ПУТЕШЕСТВИЕ
-          </span>
-
-          <h2>Твоя следующая любимая игра</h2>
-
-          <div className="games-grid">
-            {games.map((game) => (
-              <GameCard
-                key={game.id}
-                game={game}
-                onAddToCart={() => {
-                  setCartCount((currentCount) => currentCount + 1)
-                }}
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <Home
+                games={games}
+                onAddToCart={addToCart}
               />
-            ))}
-          </div>
-        </section>
+            }
+          />
+
+          <Route
+            path="/cart"
+            element={
+              <CartPage
+                cartItems={cartItems}
+                onIncrease={increaseQuantity}
+                onDecrease={decreaseQuantity}
+                onRemove={removeFromCart}
+              />
+            }
+          />
+
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/support" element={<SupportPage />} />
+          <Route path="/legal" element={<LegalPage />} />
+        </Routes>
       </main>
-    </>
+
+      <Footer />
+    </BrowserRouter>
   )
 }
 
