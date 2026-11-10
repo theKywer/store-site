@@ -1,16 +1,79 @@
-# React + Vite
+🌙 Luna Market
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Luna Market — концепция цифрового магазина видеоигр с каталогом, поиском, фильтрацией и корзиной.
 
-Currently, two official plugins are available:
+Проект разработан в образовательных целях для изучения React и современной веб-разработки.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+✨ Возможности
 
-## React Compiler
+Просмотр каталога видеоигр.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Поиск игр по названию, жанру и описанию.
 
-## Expanding the ESLint configuration
+Фильтрация по жанрам и возрастному рейтингу.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Сортировка по цене и названию.
+
+Добавление игр в корзину.
+
+Изменение количества товаров и удаление из корзины.
+
+Сохранение корзины в браузере.
+
+Отдельные страницы с информацией о проекте, поддержкой и правовыми сведениями.
+
+Адаптивный интерфейс.
+
+🛠 Технологии
+
+React
+
+JavaScript
+
+Vite
+
+React Router
+
+CSS
+
+localStorage
+
+Git / GitHub
+
+🚀 Запуск проекта
+
+Для запуска потребуется установленный Node.js и npm.
+
+Клонируй репозиторий:
+
+git clone git@github.com:theKywer/store-site.git
+
+Перейди в папку проекта:
+
+cd store-site
+
+Установи зависимости:
+
+npm install
+
+Запусти проект:
+
+npm run dev
+
+После запуска открой адрес, указанный в терминале (обычно http://localhost:5173/).
+
+📁 Структура проекта
+
+src/
+├── components/   # Переиспользуемые компоненты
+├── pages/        # Страницы сайта
+├── data/         # Данные об играх
+├── App.jsx       # Главный компонент приложения
+├── App.css       # Стили приложения
+└── main.jsx      # Точка входа React
+
+📌 Статус проекта
+
+Проект находится в разработке. Функции покупки и оплаты реальных товаров пока не реализованы.
+
+Luna Market © 2026
