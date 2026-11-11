@@ -5,32 +5,26 @@
 
 /* HEADER */
 
-
 .header {
   position: sticky;
   top: 0;
   z-index: 1000;
-
   display: flex;
   align-items: center;
   justify-content: space-between;
-
   width: 100%;
   max-width: 1280px;
   margin: 0 auto;
   padding: 24px 40px;
-
   background: rgba(17, 16, 21, 0.92);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid #302b3a;
 }
 
-
 .logo {
   display: flex;
   align-items: center;
   gap: 10px;
-
   font-size: 18px;
   font-weight: 800;
   letter-spacing: 1px;
@@ -40,13 +34,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-
   width: 36px;
   height: 36px;
-
   border-radius: 10px;
   background: var(--color-purple);
-
   color: white;
   font-size: 20px;
 }
@@ -69,13 +60,10 @@
 
 .cart-button {
   padding: 11px 20px;
-
   border: none;
   border-radius: 9px;
-
   background: var(--color-purple);
   color: white;
-
   font-weight: 600;
   transition: background 0.2s ease;
 }
@@ -89,12 +77,10 @@
 .hero {
   display: flex;
   align-items: center;
-
   max-width: 1280px;
   min-height: 530px;
   margin: 0 auto;
   padding: 70px 40px;
-
   background:
     radial-gradient(
       ellipse at 75% 50%,
@@ -117,7 +103,6 @@
 
 .hero h1 {
   margin: 24px 0;
-
   font-size: clamp(42px, 6vw, 68px);
   line-height: 1.1;
   letter-spacing: -2px;
@@ -129,7 +114,6 @@
 
 .hero-description {
   max-width: 480px;
-
   color: var(--color-muted);
   font-size: 16px;
   line-height: 1.8;
@@ -139,17 +123,13 @@
   display: inline-flex;
   align-items: center;
   gap: 14px;
-
   margin-top: 24px;
   padding: 15px 23px;
-
   border-radius: 9px;
   background: var(--color-purple);
-
   color: white;
   font-size: 14px;
   font-weight: 600;
-
   transition:
     background 0.2s ease,
     transform 0.2s ease;
@@ -184,7 +164,6 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
-
   margin-top: 32px;
 }
 
@@ -192,12 +171,9 @@
 
 .game-card {
   overflow: hidden;
-
   border: 1px solid #302b3a;
   border-radius: 14px;
-
   background: var(--color-surface);
-
   transition:
     transform 0.2s ease,
     border-color 0.2s ease;
@@ -220,21 +196,48 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease;
 }
 
-.game-card-image span {
+.game-card:hover .game-card-image img {
+  transform: scale(1.04);
+}
+
+.game-card-image .game-card-genre {
   position: absolute;
   bottom: 16px;
   left: 16px;
-
   padding: 6px 10px;
-
   border-radius: 6px;
   background: rgba(139, 92, 246, 0.85);
-
   color: white;
   font-size: 12px;
   font-weight: 600;
+}
+
+.game-card-badge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(17, 16, 21, 0.9);
+  border: 1px solid rgba(167, 139, 250, 0.55);
+  color: #d8c9ff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.game-card-discount {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: #e879a9;
+  color: #171019;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 /* CARD CONTENT */
@@ -248,10 +251,19 @@
   font-size: 20px;
 }
 
+.game-card-content h3 a {
+  color: var(--color-text);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.game-card-content h3 a:hover {
+  color: var(--color-purple-hover);
+}
+
 .game-card-content p {
   min-height: 44px;
   margin: 0;
-
   color: var(--color-muted);
   font-size: 14px;
   line-height: 1.6;
@@ -263,8 +275,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-
+  gap: 12px;
   margin-top: 24px;
+}
+
+.game-card-price {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.game-card-old-price {
+  color: #928b9d;
+  font-size: 12px;
+  text-decoration: line-through;
 }
 
 .game-card-footer strong {
@@ -274,16 +298,13 @@
 
 .game-card-footer button {
   padding: 10px 16px;
-
   border: none;
   border-radius: 8px;
-
   background: var(--color-purple);
   color: white;
-
   font-size: 13px;
   font-weight: 600;
-
+  cursor: pointer;
   transition: background 0.2s ease;
 }
 
@@ -337,7 +358,6 @@
   }
 }
 
-
 /* CART */
 
 .cart-section {
@@ -365,12 +385,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-
   padding: 18px 20px;
-
   border: 1px solid #302b3a;
   border-radius: 10px;
-
   background: var(--color-surface);
 }
 
@@ -382,12 +399,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-
   margin-top: 24px;
   padding-top: 20px;
-
   border-top: 1px solid #302b3a;
-
   font-size: 20px;
 }
 
@@ -400,7 +414,6 @@
 .cart-button {
   display: inline-flex;
   align-items: center;
-
   text-decoration: none;
 }
 
@@ -417,7 +430,6 @@
   }
 }
 
-
 /* CART ITEM ACTIONS */
 
 .cart-item-actions {
@@ -428,13 +440,10 @@
 
 .cart-item-actions button {
   padding: 8px 12px;
-
   border: 1px solid #493044;
   border-radius: 7px;
-
   background: transparent;
   color: #e879a9;
-
   font-size: 12px;
   transition:
     background 0.2s ease,
@@ -445,7 +454,6 @@
   background: rgba(232, 121, 169, 0.1);
   border-color: #e879a9;
 }
-
 
 /* CART PAGE */
 
@@ -476,12 +484,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-
   padding: 16px;
-
   border: 1px solid #302b3a;
   border-radius: 12px;
-
   background: var(--color-surface);
 }
 
@@ -494,7 +499,6 @@
 .cart-item-info img {
   width: 120px;
   height: 70px;
-
   border-radius: 8px;
   object-fit: cover;
 }
@@ -522,13 +526,10 @@
 
 .cart-item-actions button {
   padding: 8px 12px;
-
   border: 1px solid #493044;
   border-radius: 7px;
-
   background: transparent;
   color: #e879a9;
-
   font-size: 12px;
   transition:
     background 0.2s ease,
@@ -544,12 +545,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-
   margin-top: 28px;
   padding-top: 24px;
-
   border-top: 1px solid #302b3a;
-
   font-size: 20px;
 }
 
@@ -606,7 +604,6 @@
   min-width: 20px;
   text-align: center;
 }
-
 
 /* FOOTER */
 
@@ -740,7 +737,6 @@
     margin-top: 35px;
   }
 }
-
 
 /* CATALOG FILTERS */
 

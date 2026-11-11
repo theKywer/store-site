@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 
 function CartPage({
   cartItems,
@@ -5,47 +6,97 @@ function CartPage({
   onDecrease,
   onRemove,
 }) {
-  const totalPrice = cartItems.reduce((total, item) => {
-    return total + item.game.price * item.quantity
-  }, 0)
+  const totalPrice = cartItems.reduce(
+    (total, item) => total + item.game.price * item.quantity,
+    0
+  )
+
+  const totalOldPrice = cartItems.reduce(
+    (total, item) => {
+      const game = item.game
+      const hasDiscount =
+        game.discount > 0 && game.oldPrice > game.price
+
+      return total + (hasDiscount ? game.oldPrice : game.price) * item.quantity
+    },
+    0
+  )
+
+  const totalSavings = totalOldPrice - totalPrice
+
+  if (cartItems.length === 0) {
+    return (
+      <section className="cart-section">
+        <h1>Корзина</h1>
+
+        <div className="empty-cart">
+          <h2>Корзина пока пуста</h2>
+          <p>Самое время найти что-нибудь интересное!</p>
+
+          <Link to="/#catalog" className="primary-button">
+            Перейти в каталог
+          </Link>
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section className="cart-section">
-      <span className="section-label">ТВОИ ПОКУПКИ</span>
-
       <h1>Корзина</h1>
 
-      {cartItems.length === 0 ? (
-        <p>Корзина пока пуста.</p>
-      ) : (
-        <>
-          <div className="cart-items">
-            {cartItems.map((item) => (
-              <div
-                className="cart-item"
-                key={item.game.id}
-              >
-                <div className="cart-item-info">
-                  <img
-                    src={item.game.image}
-                    alt={item.game.title}
-                  />
+      <div className="cart-content">
+        <div className="cart-items">
+          {cartItems.map((item) => {
+            const game = item.game
 
-                  <div>
-                    <h3>{item.game.title}</h3>
-                    <span>{item.game.genre}</span>
+            const hasDiscount =
+              game.discount > 0 &&
+              game.oldPrice > game.price
+
+            return (
+              <article className="cart-item" key={game.id}>
+                <div className="cart-item-image">
+                  <img src={game.image} alt={game.title} />
+
+                  {hasDiscount && (
+                    <span className="cart-item-discount">
+                      -{game.discount}%
+                    </span>
+                  )}
+                </div>
+
+                <div className="cart-item-info">
+                  <Link to={`/game/${game.id}`}>
+                    <h3>{game.title}</h3>
+                  </Link>
+
+                  <span>{game.genre}</span>
+
+                  <div className="cart-item-prices">
+                    {hasDiscount && (
+                      <span className="cart-item-old-price">
+                        {game.oldPrice.toLocaleString('ru-RU')} ₸
+                      </span>
+                    )}
+
+                    <strong>
+                      {game.price.toLocaleString('ru-RU')} ₸
+                    </strong>
                   </div>
+
+                  {hasDiscount && (
+                    <span className="cart-item-savings">
+                      Экономия: {((game.oldPrice - game.price) * item.quantity).toLocaleString('ru-RU')} ₸
+                    </span>
+                  )}
                 </div>
 
                 <div className="cart-item-actions">
-                  <strong>
-                    {(item.game.price * item.quantity).toLocaleString('ru-RU')} ₸
-                  </strong>
-
-                  <div className="quantity-controls">
+                  <div className="cart-quantity">
                     <button
                       type="button"
-                      onClick={() => onDecrease(item.game.id)}
+                      onClick={() => onDecrease(game.id)}
                     >
                       −
                     </button>
@@ -54,7 +105,7 @@ function CartPage({
 
                     <button
                       type="button"
-                      onClick={() => onIncrease(item.game.id)}
+                      onClick={() => onIncrease(game.id)}
                     >
                       +
                     </button>
@@ -62,24 +113,52 @@ function CartPage({
 
                   <button
                     type="button"
-                    onClick={() => onRemove(item.game.id)}
+                    className="cart-remove"
+                    onClick={() => onRemove(game.id)}
                   >
                     Удалить
                   </button>
                 </div>
-              </div>
-            ))}
-          </div>
+              </article>
+            )
+          })}
+        </div>
+
+        <aside className="cart-summary">
+          <h2>Итого</h2>
+
+          {totalSavings > 0 && (
+            <div className="cart-total-old">
+              <span>Без скидок</span>
+              <span>
+                {totalOldPrice.toLocaleString('ru-RU')} ₸
+              </span>
+            </div>
+          )}
 
           <div className="cart-total">
-            <span>Итого:</span>
+            <span>К оплате</span>
 
             <strong>
               {totalPrice.toLocaleString('ru-RU')} ₸
             </strong>
           </div>
-        </>
-      )}
+
+          {totalSavings > 0 && (
+            <div className="cart-total-savings">
+              <span>Твоя экономия</span>
+
+              <strong>
+                {totalSavings.toLocaleString('ru-RU')} ₸
+              </strong>
+            </div>
+          )}
+
+          <button type="button" className="checkout-button">
+            Перейти к оформлению
+          </button>
+        </aside>
+      </div>
     </section>
   )
 }
