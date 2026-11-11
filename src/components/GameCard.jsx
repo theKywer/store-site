@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 
 function GameCard({ game, onAddToCart }) {
   return (
@@ -14,7 +15,11 @@ function GameCard({ game, onAddToCart }) {
           <span className="age-rating">{game.ageRating}</span>
         </div>
 
-        <h3>{game.title}</h3>
+        <h3>
+          <Link to={`/game/${game.id}`}>
+            {game.title}
+          </Link>
+        </h3>
 
         <p>{game.description}</p>
 

@@ -11,6 +11,7 @@ import CartPage from './pages/CartPage'
 import AboutPage from './pages/AboutPage'
 import SupportPage from './pages/SupportPage'
 import LegalPage from './pages/LegalPage'
+import GamePage from './pages/GamePage'
 
 import games from './data/game'
 import './App.css'
@@ -137,6 +138,16 @@ function App() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/support" element={<SupportPage />} />
           <Route path="/legal" element={<LegalPage />} />
+
+          <Route
+            path="/game/:id"
+            element={
+              <GamePage
+                games={games}
+                onAddToCart={addToCart}
+              />
+            }
+          />
         </Routes>
       </main>
 

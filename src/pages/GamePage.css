@@ -1,0 +1,136 @@
+
+.game-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+  color: #f5f3ff;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 28px;
+  color: #b9a5ff;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.back-link:hover {
+  color: #ffffff;
+}
+
+.game-page-content {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 40px;
+  align-items: start;
+  padding: 28px;
+  background: #17151f;
+  border: 1px solid #30283e;
+  border-radius: 16px;
+}
+
+.game-page-image {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.game-page-info {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.game-page-info .section-label {
+  color: #a78bfa;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.game-page-info h1 {
+  margin: 0;
+  font-size: 36px;
+}
+
+.game-page-info p {
+  color: #aaa5b5;
+  line-height: 1.7;
+}
+
+.game-page-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  padding: 20px 0;
+  border-top: 1px solid #30283e;
+  border-bottom: 1px solid #30283e;
+}
+
+.game-page-meta div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.game-page-meta span {
+  color: #888293;
+  font-size: 13px;
+}
+
+.game-page-meta strong {
+  color: #e8e3f0;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.game-page-purchase {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: auto;
+}
+
+.game-page-purchase strong {
+  font-size: 24px;
+}
+
+.game-page-purchase button {
+  padding: 13px 22px;
+  border: none;
+  border-radius: 8px;
+  background: #8b5cf6;
+  color: white;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.game-page-purchase button:hover {
+  background: #7443df;
+}
+
+@media (max-width: 768px) {
+  .game-page-content {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    padding: 18px;
+  }
+
+  .game-page-info h1 {
+    font-size: 28px;
+  }
+
+  .game-page-purchase {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .game-page-meta {
+    grid-template-columns: 1fr;
+  }
+}
