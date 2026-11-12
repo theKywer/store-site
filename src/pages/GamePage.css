@@ -36,6 +36,7 @@
 .game-page-image-wrapper {
   position: relative;
   width: 100%;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   border: 1px solid #302b3a;
   border-radius: 12px;
@@ -48,6 +49,11 @@
   aspect-ratio: 16 / 9;
   object-fit: cover;
   border-radius: 11px;
+}
+
+.game-page-video-embed {
+  border: 0;
+  background: #000;
 }
 
 .game-page-gallery-strip {
@@ -64,7 +70,7 @@
 .game-page-gallery-item {
   position: relative;
   flex: 0 0 142px;
-  height: 80px;
+  aspect-ratio: 16 / 9;
   padding: 0;
   overflow: hidden;
   border: 1px solid #393243;
@@ -85,6 +91,7 @@
   display: block;
   width: 100%;
   height: 100%;
+  aspect-ratio: 16 / 9;
   object-fit: cover;
 }
 
@@ -234,7 +241,6 @@
 
   .game-page-gallery-item {
     flex-basis: 125px;
-    height: 70px;
   }
 
   .game-page-info h1 {

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import './CartPage.css'
 
 function CartPage({
   cartItems,
@@ -23,11 +24,18 @@ function CartPage({
   )
 
   const totalSavings = totalOldPrice - totalPrice
+  const itemCount = cartItems.reduce((total, item) => total + item.quantity, 0)
 
   if (cartItems.length === 0) {
     return (
       <section className="cart-section">
-        <h1>Корзина</h1>
+        <div className="cart-heading">
+          <div>
+            <span className="section-label">ВАШ ЗАКАЗ</span>
+            <h1>Корзина</h1>
+          </div>
+          <span className="cart-count">0 товаров</span>
+        </div>
 
         <div className="empty-cart">
           <h2>Корзина пока пуста</h2>
@@ -43,7 +51,15 @@ function CartPage({
 
   return (
     <section className="cart-section">
-      <h1>Корзина</h1>
+      <div className="cart-heading">
+        <div>
+          <span className="section-label">ВАШ ЗАКАЗ</span>
+          <h1>Корзина</h1>
+        </div>
+        <span className="cart-count">
+          {itemCount} {itemCount === 1 ? 'товар' : itemCount < 5 ? 'товара' : 'товаров'}
+        </span>
+      </div>
 
       <div className="cart-content">
         <div className="cart-items">
@@ -97,6 +113,7 @@ function CartPage({
                     <button
                       type="button"
                       onClick={() => onDecrease(game.id)}
+                      aria-label={`Уменьшить количество: ${game.title}`}
                     >
                       −
                     </button>
@@ -106,6 +123,7 @@ function CartPage({
                     <button
                       type="button"
                       onClick={() => onIncrease(game.id)}
+                      aria-label={`Увеличить количество: ${game.title}`}
                     >
                       +
                     </button>
@@ -115,6 +133,7 @@ function CartPage({
                     type="button"
                     className="cart-remove"
                     onClick={() => onRemove(game.id)}
+                    aria-label={`Удалить ${game.title} из корзины`}
                   >
                     Удалить
                   </button>

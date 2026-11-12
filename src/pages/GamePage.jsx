@@ -22,10 +22,39 @@ function GamePage({ games, onAddToCart }) {
         ),
       ]
     : [{ type: 'image', src: game?.image, thumbnail: game?.image, alt: game?.title }]
-  const galleryMedia = media.length > 0 ? media : fallbackMedia
+  const officialTrailerGallery = game?.officialTrailerId
+    ? [
+        {
+          type: 'youtube',
+          src: `https://www.youtube-nocookie.com/embed/${game.officialTrailerId}`,
+          thumbnail: `https://img.youtube.com/vi/${game.officialTrailerId}/maxresdefault.jpg`,
+          alt: `${game.title} — официальный трейлер`,
+        },
+        ...[
+          'maxres1.jpg',
+          'maxres2.jpg',
+          'maxres3.jpg',
+          'maxresdefault.jpg',
+          'hq720.jpg',
+        ].map((frame, index) => ({
+            type: 'image',
+            src: `https://img.youtube.com/vi/${game.officialTrailerId}/${frame}`,
+            thumbnail: `https://img.youtube.com/vi/${game.officialTrailerId}/${frame}`,
+            alt: `${game.title} — кадр ${index + 1} официального трейлера`,
+          })),
+      ]
+    : []
+  const galleryMedia = game?.gallery?.length
+    ? [...game.gallery, ...officialTrailerGallery.slice(1, 5)]
+    : officialTrailerGallery.length > 0
+      ? officialTrailerGallery
+    : media.length > 0
+      ? media
+      : fallbackMedia
 
   useEffect(() => {
     if (!game) return
+    if (game.gallery?.length || game.officialTrailerId) return
 
     if (!steamAppId) {
       setMedia([])
@@ -93,7 +122,16 @@ function GamePage({ games, onAddToCart }) {
       <div className="game-page-content">
         <div className="game-page-gallery">
           <div className="game-page-image-wrapper">
-            {galleryMedia[activeMediaIndex]?.type === 'video' ? (
+            {galleryMedia[activeMediaIndex]?.type === 'youtube' ? (
+              <iframe
+                className="game-page-image game-page-video-embed"
+                src={galleryMedia[activeMediaIndex].src}
+                title={galleryMedia[activeMediaIndex].alt}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+              />
+            ) : galleryMedia[activeMediaIndex]?.type === 'video' ? (
               <video
                 className="game-page-image"
                 src={galleryMedia[activeMediaIndex].src}
@@ -105,9 +143,30 @@ function GamePage({ games, onAddToCart }) {
               />
             ) : (
               <img
+                key={`${activeMediaIndex}-${galleryMedia[activeMediaIndex]?.src}`}
                 className="game-page-image"
                 src={galleryMedia[activeMediaIndex]?.src ?? game.image}
                 alt={galleryMedia[activeMediaIndex]?.alt ?? game.title}
+                onError={(event) => {
+                  const image = event.currentTarget
+                  if (image.src.includes('img.youtube.com')) {
+                    const frameBase = galleryMedia[activeMediaIndex].src.replace(
+                      /\/[^/]+$/,
+                      '/',
+                    )
+                    if (!image.dataset.fallback) {
+                      image.dataset.fallback = 'maxres'
+                      image.src = `${frameBase}maxresdefault.jpg`
+                      return
+                    }
+                    if (image.dataset.fallback === 'maxres') {
+                      image.dataset.fallback = 'hq'
+                      image.src = `${frameBase}hqdefault.jpg`
+                      return
+                    }
+                  }
+                  image.hidden = true
+                }}
               />
             )}
             {game.badge && (
@@ -126,7 +185,7 @@ function GamePage({ games, onAddToCart }) {
                   type="button"
                   onClick={() => setActiveMediaIndex(index)}
                   aria-label={
-                    item.type === 'video'
+                    item.type === 'video' || item.type === 'youtube'
                       ? 'Воспроизвести трейлер'
                       : `Показать скриншот ${index}`
                   }
@@ -137,10 +196,24 @@ function GamePage({ games, onAddToCart }) {
                     alt=""
                     loading="lazy"
                     onError={(event) => {
-                      event.currentTarget.closest('button').hidden = true
+                      const image = event.currentTarget
+                      if (image.src.includes('img.youtube.com')) {
+                        const frameBase = item.src.replace(/\/[^/]+$/, '/')
+                        if (!image.dataset.fallback) {
+                          image.dataset.fallback = 'maxres'
+                          image.src = `${frameBase}maxresdefault.jpg`
+                          return
+                        }
+                        if (image.dataset.fallback === 'maxres') {
+                          image.dataset.fallback = 'hq'
+                          image.src = `${frameBase}hqdefault.jpg`
+                          return
+                        }
+                      }
+                      image.closest('button').hidden = true
                     }}
                   />
-                  {item.type === 'video' && (
+                  {(item.type === 'video' || item.type === 'youtube') && (
                     <span className="game-page-play-icon" aria-hidden="true">
                       ▶
                     </span>
