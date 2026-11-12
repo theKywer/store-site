@@ -1,7 +1,7 @@
 
 import { Link } from 'react-router-dom'
 
-function Header({ cartCount }) {
+function Header({ cartCount, favoriteCount }) {
   function handleLogoClick() {
     window.scrollTo({
       top: 0,
@@ -21,9 +21,11 @@ function Header({ cartCount }) {
       </Link>
 
       <nav className="navigation">
-        <Link to="/#catalog">Каталог</Link>
         <Link to="/#discounts">Скидки</Link>
-        <Link to="/#about">О нас</Link>
+        <Link to="/favorites" className="favorites-nav-link">
+          <span aria-hidden="true">♡</span> Избранное ({favoriteCount})
+        </Link>
+        <Link to="/about">О нас</Link>
       </nav>
 
       <Link to="/cart" className="cart-button">

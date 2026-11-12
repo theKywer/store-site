@@ -3,9 +3,10 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import './GamePage.css'
 
-function GamePage({ games, onAddToCart }) {
+function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
   const { id } = useParams()
   const game = games.find((game) => game.id === Number(id))
+  const isFavorite = game ? favoriteIds.includes(game.id) : false
   const [media, setMedia] = useState([])
   const [activeMediaIndex, setActiveMediaIndex] = useState(0)
   const steamAppId = game?.image.match(/\/apps\/(\d+)/)?.[1]
@@ -227,7 +228,20 @@ function GamePage({ games, onAddToCart }) {
         <div className="game-page-info">
           <span className="section-label">{game.genre}</span>
 
-          <h1>{game.title}</h1>
+          <div className="game-page-title-row">
+            <h1>{game.title}</h1>
+            <button
+              type="button"
+              className={`favorite-toggle game-page-favorite${isFavorite ? ' is-favorite' : ''}`}
+              onClick={() => onToggleFavorite(game.id)}
+              aria-label={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
+              aria-pressed={isFavorite}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" />
+              </svg>
+            </button>
+          </div>
 
           <p>{game.description}</p>
 

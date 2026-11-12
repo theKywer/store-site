@@ -12,11 +12,27 @@ import AboutPage from './pages/AboutPage'
 import SupportPage from './pages/SupportPage'
 import LegalPage from './pages/LegalPage'
 import GamePage from './pages/GamePage'
+import FavoritesPage from './pages/FavoritesPage'
 
 import games from './data/game'
 import './App.css'
 
 function App() {
+  const [favoriteIds, setFavoriteIds] = useState(() => {
+    try {
+      const savedFavorites = JSON.parse(
+        localStorage.getItem('favoriteGameIds') || '[]',
+      )
+      return Array.isArray(savedFavorites)
+        ? [...new Set(savedFavorites.map(Number))].filter((id) =>
+            games.some((game) => game.id === id),
+          )
+        : []
+    } catch {
+      return []
+    }
+  })
+
   const [cartItems, setCartItems] = useState(() => {
     try {
       const savedCart = localStorage.getItem('cartItems')
@@ -53,6 +69,18 @@ function App() {
   useEffect(() => {
     localStorage.setItem('cartItems', JSON.stringify(cartItems))
   }, [cartItems])
+
+  useEffect(() => {
+    localStorage.setItem('favoriteGameIds', JSON.stringify(favoriteIds))
+  }, [favoriteIds])
+
+  function toggleFavorite(gameId) {
+    setFavoriteIds((currentIds) =>
+      currentIds.includes(gameId)
+        ? currentIds.filter((id) => id !== gameId)
+        : [...currentIds, gameId]
+    )
+  }
 
   function addToCart(game) {
     setCartItems((currentItems) => {
@@ -109,7 +137,7 @@ function App() {
     <BrowserRouter>
       <ScrollToTop />
 
-      <Header cartCount={cartCount} />
+      <Header cartCount={cartCount} favoriteCount={favoriteIds.length} />
 
       <main>
         <Routes>
@@ -118,6 +146,20 @@ function App() {
             element={
               <Home
                 games={games}
+                onAddToCart={addToCart}
+                favoriteIds={favoriteIds}
+                onToggleFavorite={toggleFavorite}
+              />
+            }
+          />
+
+          <Route
+            path="/favorites"
+            element={
+              <FavoritesPage
+                games={games}
+                favoriteIds={favoriteIds}
+                onToggleFavorite={toggleFavorite}
                 onAddToCart={addToCart}
               />
             }
@@ -145,6 +187,8 @@ function App() {
               <GamePage
                 games={games}
                 onAddToCart={addToCart}
+                favoriteIds={favoriteIds}
+                onToggleFavorite={toggleFavorite}
               />
             }
           />

@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react'
 import GameCard from '../components/GameCard'
 
-function Home({ games, onAddToCart }) {
+function Home({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
   const [search, setSearch] = useState('')
   const [selectedGenre, setSelectedGenre] = useState('Все жанры')
   const [selectedAge, setSelectedAge] = useState('Любой возраст')
@@ -152,6 +152,8 @@ function Home({ games, onAddToCart }) {
                 key={game.id}
                 game={game}
                 onAddToCart={onAddToCart}
+                isFavorite={favoriteIds.includes(game.id)}
+                onToggleFavorite={onToggleFavorite}
               />
             ))}
           </div>
