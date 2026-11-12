@@ -13,11 +13,13 @@ import SupportPage from './pages/SupportPage'
 import LegalPage from './pages/LegalPage'
 import GamePage from './pages/GamePage'
 import FavoritesPage from './pages/FavoritesPage'
+import ToastViewport from './components/ToastViewport'
 
 import games from './data/game'
 import './App.css'
 
 function App() {
+  const [toasts, setToasts] = useState([])
   const [favoriteIds, setFavoriteIds] = useState(() => {
     try {
       const savedFavorites = JSON.parse(
@@ -44,9 +46,17 @@ function App() {
       if (!Array.isArray(parsedCart)) return []
 
       return parsedCart.reduce((cart, item) => {
-        const game = item.game ?? item
-        const quantity = item.game
-          ? Math.max(1, Number(item.quantity) || 1)
+        if (!item || typeof item !== 'object') return cart
+
+        const savedGame = item.game ?? item
+        const gameId = Number(savedGame?.id)
+        const game = games.find((entry) => entry.id === gameId)
+
+        if (!game) return cart
+
+        const savedQuantity = item.game ? Number(item.quantity) : 1
+        const quantity = Number.isFinite(savedQuantity) && savedQuantity > 0
+          ? Math.max(1, Math.floor(savedQuantity))
           : 1
 
         const existingItem = cart.find(
@@ -67,22 +77,74 @@ function App() {
   })
 
   useEffect(() => {
-    localStorage.setItem('cartItems', JSON.stringify(cartItems))
+    try {
+      localStorage.setItem('cartItems', JSON.stringify(cartItems))
+    } catch {
+      // The cart remains usable for this session if storage is unavailable.
+    }
   }, [cartItems])
 
   useEffect(() => {
-    localStorage.setItem('favoriteGameIds', JSON.stringify(favoriteIds))
+    try {
+      localStorage.setItem('favoriteGameIds', JSON.stringify(favoriteIds))
+    } catch {
+      // Favorites remain usable for this session if storage is unavailable.
+    }
   }, [favoriteIds])
 
+  function notify(message, type = 'cart') {
+    const id = `${Date.now()}-${Math.random()}`
+    setToasts((currentToasts) => [
+      ...currentToasts.slice(-3),
+      { id, message, type, isLeaving: false },
+    ])
+
+    window.setTimeout(() => {
+      setToasts((currentToasts) =>
+        currentToasts.map((toast) =>
+          toast.id === id ? { ...toast, isLeaving: true } : toast,
+        ),
+      )
+    }, 2700)
+
+    window.setTimeout(() => {
+      setToasts((currentToasts) =>
+        currentToasts.filter((toast) => toast.id !== id),
+      )
+    }, 3050)
+  }
+
+  function dismissToast(toastId) {
+    setToasts((currentToasts) =>
+      currentToasts.map((toast) =>
+        toast.id === toastId ? { ...toast, isLeaving: true } : toast,
+      ),
+    )
+    window.setTimeout(() => {
+      setToasts((currentToasts) =>
+        currentToasts.filter((toast) => toast.id !== toastId),
+      )
+    }, 350)
+  }
+
   function toggleFavorite(gameId) {
+    const willBeFavorite = !favoriteIds.includes(gameId)
+    const gameTitle = games.find((game) => game.id === gameId)?.title
     setFavoriteIds((currentIds) =>
       currentIds.includes(gameId)
         ? currentIds.filter((id) => id !== gameId)
         : [...currentIds, gameId]
     )
+    notify(
+      willBeFavorite
+        ? `«${gameTitle}» добавлена в избранное`
+        : `«${gameTitle}» удалена из избранного`,
+      'favorite',
+    )
   }
 
   function addToCart(game) {
+    const isAlreadyInCart = cartItems.some((item) => item.game.id === game.id)
     setCartItems((currentItems) => {
       const existingItem = currentItems.find(
         (item) => item.game.id === game.id
@@ -98,6 +160,12 @@ function App() {
 
       return [...currentItems, { game, quantity: 1 }]
     })
+    notify(
+      isAlreadyInCart
+        ? `Количество игры «${game.title}» увеличено`
+        : `«${game.title}» добавлена в корзину`,
+      'cart',
+    )
   }
 
   function increaseQuantity(gameId) {
@@ -123,9 +191,11 @@ function App() {
   }
 
   function removeFromCart(gameId) {
+    const removedGame = cartItems.find((item) => item.game.id === gameId)?.game
     setCartItems((currentItems) =>
       currentItems.filter((item) => item.game.id !== gameId)
     )
+    if (removedGame) notify(`«${removedGame.title}» удалена из корзины`, 'cart')
   }
 
   const cartCount = cartItems.reduce(
@@ -136,6 +206,7 @@ function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <ToastViewport toasts={toasts} onDismiss={dismissToast} />
 
       <Header cartCount={cartCount} favoriteCount={favoriteIds.length} />
 

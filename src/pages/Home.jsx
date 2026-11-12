@@ -82,12 +82,12 @@ function Home({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
         </div>
       </section>
 
-      <section className="catalog-section" id="catalog">
+      <section className="catalog-section" id="discounts">
         <span className="section-label">
           НАЧНИ СВОЁ ПУТЕШЕСТВИЕ
         </span>
 
-        <h2>Твоя следующая любимая игра</h2>
+        <h2 id="catalog">Твоя следующая любимая игра</h2>
 
         <div className="catalog-filters">
           <div className="search-field">

@@ -7,8 +7,9 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
   const { id } = useParams()
   const game = games.find((game) => game.id === Number(id))
   const isFavorite = game ? favoriteIds.includes(game.id) : false
-  const [media, setMedia] = useState([])
+  const [mediaState, setMediaState] = useState({ gameId: null, items: [] })
   const [activeMediaIndex, setActiveMediaIndex] = useState(0)
+  const media = mediaState.gameId === game?.id ? mediaState.items : []
   const steamAppId = game?.image.match(/\/apps\/(\d+)/)?.[1]
   const fallbackMedia = steamAppId
     ? [
@@ -52,18 +53,15 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
     : media.length > 0
       ? media
       : fallbackMedia
+  const visibleMediaIndex = galleryMedia[activeMediaIndex] ? activeMediaIndex : 0
 
   useEffect(() => {
     if (!game) return
     if (game.gallery?.length || game.officialTrailerId) return
 
-    if (!steamAppId) {
-      setMedia([])
-      return
-    }
+    if (!steamAppId) return
 
     const controller = new AbortController()
-    setActiveMediaIndex(0)
 
     fetch(
       `https://store.steampowered.com/api/appdetails?appids=${steamAppId}&l=english`,
@@ -96,14 +94,19 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
           }))
           .filter((item) => item.src)
 
-        setMedia([...trailers.slice(0, 1), ...screenshots])
+        setMediaState({
+          gameId: game.id,
+          items: [...trailers.slice(0, 1), ...screenshots],
+        })
       })
       .catch((error) => {
-        if (error.name !== 'AbortError') setMedia([])
+        if (error.name !== 'AbortError') {
+          setMediaState({ gameId: game.id, items: [] })
+        }
       })
 
     return () => controller.abort()
-  }, [game])
+  }, [game, steamAppId])
 
   if (!game) {
     return (
@@ -123,35 +126,35 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
       <div className="game-page-content">
         <div className="game-page-gallery">
           <div className="game-page-image-wrapper">
-            {galleryMedia[activeMediaIndex]?.type === 'youtube' ? (
+            {galleryMedia[visibleMediaIndex]?.type === 'youtube' ? (
               <iframe
                 className="game-page-image game-page-video-embed"
-                src={galleryMedia[activeMediaIndex].src}
-                title={galleryMedia[activeMediaIndex].alt}
+                src={galleryMedia[visibleMediaIndex].src}
+                title={galleryMedia[visibleMediaIndex].alt}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 referrerPolicy="strict-origin-when-cross-origin"
                 allowFullScreen
               />
-            ) : galleryMedia[activeMediaIndex]?.type === 'video' ? (
+            ) : galleryMedia[visibleMediaIndex]?.type === 'video' ? (
               <video
                 className="game-page-image"
-                src={galleryMedia[activeMediaIndex].src}
-                poster={galleryMedia[activeMediaIndex].thumbnail}
+                src={galleryMedia[visibleMediaIndex].src}
+                poster={galleryMedia[visibleMediaIndex].thumbnail}
                 controls
                 playsInline
                 preload="metadata"
-                aria-label={galleryMedia[activeMediaIndex].alt}
+                aria-label={galleryMedia[visibleMediaIndex].alt}
               />
             ) : (
               <img
-                key={`${activeMediaIndex}-${galleryMedia[activeMediaIndex]?.src}`}
+                key={`${visibleMediaIndex}-${galleryMedia[visibleMediaIndex]?.src}`}
                 className="game-page-image"
-                src={galleryMedia[activeMediaIndex]?.src ?? game.image}
-                alt={galleryMedia[activeMediaIndex]?.alt ?? game.title}
+                src={galleryMedia[visibleMediaIndex]?.src ?? game.image}
+                alt={galleryMedia[visibleMediaIndex]?.alt ?? game.title}
                 onError={(event) => {
                   const image = event.currentTarget
                   if (image.src.includes('img.youtube.com')) {
-                    const frameBase = galleryMedia[activeMediaIndex].src.replace(
+                    const frameBase = galleryMedia[visibleMediaIndex].src.replace(
                       /\/[^/]+$/,
                       '/',
                     )
@@ -181,7 +184,7 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
             <div className="game-page-gallery-strip" aria-label="Галерея игры">
               {galleryMedia.map((item, index) => (
                 <button
-                  className={`game-page-gallery-item${index === activeMediaIndex ? ' is-active' : ''}`}
+                  className={`game-page-gallery-item${index === visibleMediaIndex ? ' is-active' : ''}`}
                   key={`${item.type}-${item.src}`}
                   type="button"
                   onClick={() => setActiveMediaIndex(index)}
@@ -190,7 +193,7 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
                       ? 'Воспроизвести трейлер'
                       : `Показать скриншот ${index}`
                   }
-                  aria-pressed={index === activeMediaIndex}
+                  aria-pressed={index === visibleMediaIndex}
                 >
                   <img
                     src={item.thumbnail}
