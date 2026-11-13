@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Game {
+  id               Int        @id @default(autoincrement())
+  title            String
+  price            Int
+  oldPrice         Int?
+  discount         Int        @default(0)
+  badge            String?
+  genre            String
+  description      String     @db.Text
+  image            String
+  officialTrailerId String
+  developer        String
+  publisher        String
+  releaseDate      String
+  ageRating        String
+  platform         String
+
+  gallery          GameMedia[]
+}
+
+model GameMedia {
+  id         Int    @id @default(autoincrement())
+  gameId     Int
+  type       String
+  src        String
+  thumbnail  String?
+  alt        String?
+  sortOrder  Int    @default(0)
+
+  game       Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+}
