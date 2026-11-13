@@ -3,14 +3,17 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import './GamePage.css'
 
+/** Показывает сведения об игре и галерею её изображений и видео. */
 function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
   const { id } = useParams()
+  // Находит игру по ID из адреса страницы.
   const game = games.find((game) => game.id === Number(id))
   const isFavorite = game ? favoriteIds.includes(game.id) : false
   const [mediaState, setMediaState] = useState({ gameId: null, items: [] })
   const [activeMediaIndex, setActiveMediaIndex] = useState(0)
   const media = mediaState.gameId === game?.id ? mediaState.items : []
   const steamAppId = game?.image.match(/\/apps\/(\d+)/)?.[1]
+  // Готовит запасные изображения Steam, если у игры нет заданной галереи.
   const fallbackMedia = steamAppId
     ? [
         { type: 'image', src: game.image, thumbnail: game.image, alt: game.title },
@@ -24,6 +27,7 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
         ),
       ]
     : [{ type: 'image', src: game?.image, thumbnail: game?.image, alt: game?.title }]
+  // Создаёт галерею трейлера и кадров с YouTube, если указан ID трейлера.
   const officialTrailerGallery = game?.officialTrailerId
     ? [
         {
@@ -46,6 +50,7 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
           })),
       ]
     : []
+  // Выбирает галерею: заданную в данных, трейлерную, загруженную или запасную.
   const galleryMedia = game?.gallery?.length
     ? [...game.gallery, ...officialTrailerGallery.slice(1, 5)]
     : officialTrailerGallery.length > 0
@@ -53,8 +58,10 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
     : media.length > 0
       ? media
       : fallbackMedia
+  // Защищает отображение от индекса, который вышел за пределы галереи.
   const visibleMediaIndex = galleryMedia[activeMediaIndex] ? activeMediaIndex : 0
 
+  // Загружает медиа из Steam, если игра не содержит собственную галерею.
   useEffect(() => {
     if (!game) return
     if (game.gallery?.length || game.officialTrailerId) return
@@ -67,10 +74,12 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
       `https://store.steampowered.com/api/appdetails?appids=${steamAppId}&l=english`,
       { signal: controller.signal },
     )
+      // Преобразует успешный HTTP-ответ в JSON с данными игры.
       .then((response) => {
         if (!response.ok) throw new Error('Не удалось загрузить медиа игры')
         return response.json()
       })
+      // Превращает скриншоты и трейлер Steam в элементы галереи.
       .then((result) => {
         const details = result[steamAppId]?.data
         if (!details) return
@@ -99,12 +108,14 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
           items: [...trailers.slice(0, 1), ...screenshots],
         })
       })
+      // При сетевой ошибке оставляет доступной запасную галерею.
       .catch((error) => {
         if (error.name !== 'AbortError') {
           setMediaState({ gameId: game.id, items: [] })
         }
       })
 
+    // Отменяет запрос при смене игры или уходе со страницы.
     return () => controller.abort()
   }, [game, steamAppId])
 

@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
 import GameCard from '../components/GameCard'
 
+/** Показывает сохранённые игры или подсказку, если список пуст. */
 function FavoritesPage({ games, favoriteIds, onToggleFavorite, onAddToCart }) {
+  // Оставляет в списке каталога только игры, выбранные пользователем.
   const favoriteGames = games.filter((game) => favoriteIds.includes(game.id))
 
   return (

@@ -2,17 +2,20 @@
 import { useMemo, useState } from 'react'
 import GameCard from '../components/GameCard'
 
+/** Главная страница: поиск, фильтры, сортировка и каталог игр. */
 function Home({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
   const [search, setSearch] = useState('')
   const [selectedGenre, setSelectedGenre] = useState('Все жанры')
   const [selectedAge, setSelectedAge] = useState('Любой возраст')
   const [sortOrder, setSortOrder] = useState('default')
 
+  // Формирует варианты жанров без дубликатов из текущего списка игр.
   const genres = [
     'Все жанры',
     ...new Set(games.map((game) => game.genre)),
   ]
 
+  // Применяет поиск, фильтры и выбранный порядок к каталогу.
   const filteredGames = useMemo(() => {
     let result = games.filter((game) => {
       const searchText = search.toLowerCase().trim()
@@ -50,6 +53,7 @@ function Home({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
     return result
   }, [games, search, selectedGenre, selectedAge, sortOrder])
 
+  /** Возвращает каталог к исходным фильтрам и сортировке. */
   function resetFilters() {
     setSearch('')
     setSelectedGenre('Все жанры')
@@ -91,6 +95,7 @@ function Home({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
 
         <div className="catalog-filters">
           <div className="search-field">
+            {/* Поисковый ввод обновляет строку, участвующую в фильтрации. */}
             <input
               type="search"
               placeholder="Поиск игр..."
@@ -99,6 +104,7 @@ function Home({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
             />
           </div>
 
+          {/* Жанр оставляет только совпадающие игры. */}
           <select
             value={selectedGenre}
             onChange={(event) => setSelectedGenre(event.target.value)}
@@ -110,6 +116,7 @@ function Home({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
             ))}
           </select>
 
+          {/* Возрастной рейтинг ограничивает выдачу каталога. */}
           <select
             value={selectedAge}
             onChange={(event) => setSelectedAge(event.target.value)}
@@ -122,6 +129,7 @@ function Home({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
             <option value="18+">18+</option>
           </select>
 
+          {/* Выбор меняет порядок игр после применения фильтров. */}
           <select
             value={sortOrder}
             onChange={(event) => setSortOrder(event.target.value)}

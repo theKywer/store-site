@@ -1,4 +1,5 @@
 
+/** Показывает демонстрационные правила, приватность и условия проекта. */
 function LegalPage() {
   return (
     <section className="info-page">

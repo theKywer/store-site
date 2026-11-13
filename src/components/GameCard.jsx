@@ -1,7 +1,9 @@
 
 import { Link } from 'react-router-dom'
 
+/** Карточка игры с ценой, скидкой и действиями корзины/избранного. */
 function GameCard({ game, onAddToCart, isFavorite, onToggleFavorite }) {
+  // Скидка отображается только при наличии корректной старой цены.
   const hasDiscount =
     game.discount > 0 &&
     game.oldPrice > game.price

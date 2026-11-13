@@ -1,3 +1,4 @@
+/** Выводит доступные для скринридера уведомления с кнопкой закрытия. */
 function ToastViewport({ toasts, onDismiss }) {
   return (
     <div className="toast-viewport" aria-live="polite" aria-relevant="additions text">

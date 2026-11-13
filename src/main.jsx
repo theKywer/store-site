@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
+// Создаёт React-приложение и подключает корневой компонент в HTML.
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />

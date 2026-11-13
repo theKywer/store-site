@@ -1,6 +1,7 @@
 
 import { Link } from 'react-router-dom'
 
+/** Подвал сайта со ссылками на разделы и внешние социальные сети. */
 function Footer() {
   return (
     <footer className="footer">

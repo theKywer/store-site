@@ -2,6 +2,7 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 
+/** При смене маршрута прокручивает страницу вверх или к якорю URL. */
 function ScrollToTop() {
   const { pathname, hash } = useLocation()
 

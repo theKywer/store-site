@@ -1,4 +1,5 @@
 
+/** Информационная страница о концепции и идее Luna Market. */
 function AboutPage() {
   return (
     <section className="info-page">

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import './CartPage.css'
 
+/** Возвращает правильную форму слова «товар» для счётчика корзины. */
 function getItemCountLabel(count) {
   const lastTwoDigits = count % 100
   const lastDigit = count % 10
@@ -11,17 +12,20 @@ function getItemCountLabel(count) {
   return 'товаров'
 }
 
+/** Отображает позиции корзины, управление количеством и расчёт стоимости. */
 function CartPage({
   cartItems,
   onIncrease,
   onDecrease,
   onRemove,
 }) {
+  // Суммирует текущие цены всех позиций с учётом их количества.
   const totalPrice = cartItems.reduce(
     (total, item) => total + item.game.price * item.quantity,
     0
   )
 
+  // Считает сумму без скидок; для игр без скидки берёт текущую цену.
   const totalOldPrice = cartItems.reduce(
     (total, item) => {
       const game = item.game
@@ -33,7 +37,9 @@ function CartPage({
     0
   )
 
+  // Разница между полной стоимостью и оплатой — общая экономия.
   const totalSavings = totalOldPrice - totalPrice
+  // Считает число единиц товара, а не число разных позиций.
   const itemCount = cartItems.reduce((total, item) => total + item.quantity, 0)
 
   if (cartItems.length === 0) {

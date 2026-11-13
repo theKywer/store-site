@@ -1,7 +1,9 @@
 
 import { Link } from 'react-router-dom'
 
+/** Шапка сайта с навигацией и текущими счётчиками корзины и избранного. */
 function Header({ cartCount, favoriteCount }) {
+  /** При повторном нажатии на логотип плавно прокручивает страницу вверх. */
   function handleLogoClick() {
     window.scrollTo({
       top: 0,

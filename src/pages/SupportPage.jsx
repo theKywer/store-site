@@ -1,4 +1,5 @@
 
+/** Страница поддержки с ответами на частые вопросы проекта. */
 function SupportPage() {
   return (
     <section className="info-page">

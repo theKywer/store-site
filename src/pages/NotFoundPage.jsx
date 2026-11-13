@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import './NotFoundPage.css'
 
+/** Страница для неизвестных URL с переходом обратно на главную. */
 function NotFoundPage() {
   return (
     <section className="not-found-page" aria-labelledby="not-found-title">
