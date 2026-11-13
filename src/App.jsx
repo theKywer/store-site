@@ -1,4 +1,6 @@
 
+import './App.css'
+
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 
@@ -17,9 +19,13 @@ import NotFoundPage from './pages/NotFoundPage'
 import ToastViewport from './components/ToastViewport'
 
 import games from './data/game'
-import './App.css'
 
 function App() {
+  const [serverGames, setServerGames] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+  
+
   const [toasts, setToasts] = useState([])
   const [favoriteIds, setFavoriteIds] = useState(() => {
     try {
@@ -76,6 +82,29 @@ function App() {
       return []
     }
   })
+
+  useEffect(() => {
+  async function getGames() {
+    try {
+      const response = await fetch('http://localhost:3000/games')
+
+      if (!response.ok) {
+        throw new Error('Не удалось загрузить игры')
+      }
+
+      const data = await response.json()
+
+      setServerGames(data)
+    } catch (error) {
+      setError(error.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  getGames()
+}, [])
+
 
   useEffect(() => {
     try {
@@ -212,6 +241,25 @@ function App() {
       <Header cartCount={cartCount} favoriteCount={favoriteIds.length} />
 
       <main>
+       <div>
+  <h2>Игры с сервера:</h2>
+
+  {isLoading && <p>Загрузка игр...</p>}
+
+  {error && <p>Ошибка: {error}</p>}
+
+  {!isLoading && !error && serverGames.length === 0 && (
+    <p>Игры не найдены</p>
+  )}
+
+  {!isLoading && !error && serverGames.map((game) => (
+    <p key={game.id}>
+      {game.title} — {game.price} ₸
+    </p>
+  ))}
+</div>
+
+
         <Routes>
           <Route
             path="/"
