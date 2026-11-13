@@ -14,8 +14,9 @@ const games = [
   },
 ]
 
-// Обрабатывает CORS, REST-запросы к играм и простые текстовые страницы API.
+// Создание HTTP-сервера
 const server = http.createServer((req, res) => {
+  // Настройка CORS
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader(
     'Access-Control-Allow-Methods',
@@ -26,7 +27,7 @@ const server = http.createServer((req, res) => {
     'Content-Type, Authorization'
   )
 
-  // Разрешает браузеру выполнить предварительную CORS-проверку запроса.
+  // Обработка предварительного CORS-запроса
   if (req.method === 'OPTIONS') {
     res.writeHead(204)
     res.end()
@@ -34,7 +35,6 @@ const server = http.createServer((req, res) => {
   }
 
   // Получение списка игр
-  // Возвращает весь текущий список игр в формате JSON.
   if (req.method === 'GET' && req.url === '/games') {
     res.writeHead(200, {
       'Content-Type': 'application/json; charset=utf-8',
@@ -45,16 +45,13 @@ const server = http.createServer((req, res) => {
   }
 
   // Добавление новой игры
-  // Принимает JSON игры, проверяет поля и добавляет запись в память сервера.
   if (req.method === 'POST' && req.url === '/games') {
     let body = ''
 
-    // Собирает тело запроса по мере поступления сетевых фрагментов.
     req.on('data', (chunk) => {
       body += chunk
     })
 
-    // После получения всего тела разбирает JSON и проверяет данные игры.
     req.on('end', () => {
       try {
         const newGameData = JSON.parse(body)
@@ -62,18 +59,21 @@ const server = http.createServer((req, res) => {
         if (
           typeof newGameData.title !== 'string' ||
           !newGameData.title.trim() ||
-          !Number.isFinite(Number(newGameData.price))
+          !Number.isFinite(Number(newGameData.price)) ||
+          newGameData.price === '' ||
+          Number(newGameData.price) < 0
         ) {
           res.writeHead(400, {
             'Content-Type': 'text/plain; charset=utf-8',
           })
-
           res.end('Некорректные данные игры')
           return
         }
 
         const newGame = {
-          id: games.length + 1,
+          id: games.length > 0
+            ? Math.max(...games.map((game) => game.id)) + 1
+            : 1,
           title: newGameData.title.trim(),
           price: Number(newGameData.price),
         }
@@ -89,14 +89,12 @@ const server = http.createServer((req, res) => {
         res.writeHead(400, {
           'Content-Type': 'text/plain; charset=utf-8',
         })
-
         res.end('Некорректный JSON')
       }
     })
 
     return
   }
-
 
   // Редактирование игры
   if (req.method === 'PATCH' && req.url.startsWith('/games/')) {
@@ -130,11 +128,29 @@ const server = http.createServer((req, res) => {
       try {
         const updatedData = JSON.parse(body)
 
-        if (Object.keys(updatedData).length === 0) {
+        if (
+          !updatedData ||
+          typeof updatedData !== 'object' ||
+          Array.isArray(updatedData) ||
+          Object.keys(updatedData).length === 0
+        ) {
           res.writeHead(400, {
             'Content-Type': 'text/plain; charset=utf-8',
           })
           res.end('Нет данных для обновления')
+          return
+        }
+
+        const allowedFields = ['title', 'price']
+        const hasUnknownFields = Object.keys(updatedData).some(
+          (key) => !allowedFields.includes(key)
+        )
+
+        if (hasUnknownFields) {
+          res.writeHead(400, {
+            'Content-Type': 'text/plain; charset=utf-8',
+          })
+          res.end('Неизвестное поле игры')
           return
         }
 
@@ -153,24 +169,13 @@ const server = http.createServer((req, res) => {
         if (
           updatedData.price !== undefined &&
           (!Number.isFinite(Number(updatedData.price)) ||
-            updatedData.price === '')
+            updatedData.price === '' ||
+            Number(updatedData.price) < 0)
         ) {
           res.writeHead(400, {
             'Content-Type': 'text/plain; charset=utf-8',
           })
           res.end('Некорректная цена игры')
-          return
-        }
-
-        if (
-          Object.keys(updatedData).some(
-            (key) => !['title', 'price'].includes(key)
-          )
-        ) {
-          res.writeHead(400, {
-            'Content-Type': 'text/plain; charset=utf-8',
-          })
-          res.end('Неизвестное поле игры')
           return
         }
 
@@ -185,6 +190,7 @@ const server = http.createServer((req, res) => {
         res.writeHead(200, {
           'Content-Type': 'application/json; charset=utf-8',
         })
+
         res.end(JSON.stringify(game))
       } catch {
         res.writeHead(400, {
@@ -197,10 +203,43 @@ const server = http.createServer((req, res) => {
     return
   }
 
+  // Удаление игры
+  if (req.method === 'DELETE' && req.url.startsWith('/games/')) {
+    const gameId = Number(req.url.split('/')[2])
 
+    if (!Number.isInteger(gameId) || gameId <= 0) {
+      res.writeHead(400, {
+        'Content-Type': 'text/plain; charset=utf-8',
+      })
+      res.end('Некорректный ID игры')
+      return
+    }
 
+    const gameIndex = games.findIndex((game) => game.id === gameId)
 
-  // Возвращает приветствие на корневой адрес API.
+    if (gameIndex === -1) {
+      res.writeHead(404, {
+        'Content-Type': 'text/plain; charset=utf-8',
+      })
+      res.end('Игра не найдена')
+      return
+    }
+
+    const deletedGame = games.splice(gameIndex, 1)[0]
+
+    res.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+    })
+
+    res.end(JSON.stringify({
+      message: 'Игра успешно удалена',
+      game: deletedGame,
+    }))
+
+    return
+  }
+
+  // Главная страница API
   if (req.method === 'GET' && req.url === '/') {
     res.writeHead(200, {
       'Content-Type': 'text/plain; charset=utf-8',
@@ -210,7 +249,7 @@ const server = http.createServer((req, res) => {
     return
   }
 
-  // Возвращает короткое текстовое описание проекта.
+  // Информация о проекте
   if (req.method === 'GET' && req.url === '/about') {
     res.writeHead(200, {
       'Content-Type': 'text/plain; charset=utf-8',
@@ -220,43 +259,7 @@ const server = http.createServer((req, res) => {
     return
   }
 
-
-
-  // Удаляет игру по ID из URL и возвращает удалённую запись.
-  if (req.method === 'DELETE' && req.url.startsWith('/games/')) {
-  const gameId = Number(req.url.split('/')[2])
-
-  if (!Number.isInteger(gameId) || gameId <= 0) {
-    res.writeHead(400, {
-      'Content-Type': 'text/plain; charset=utf-8',
-    })
-    res.end('Некорректный ID игры')
-    return
-  }
-
-  // Ищет индекс игры, чтобы удалить её из массива.
-  const gameIndex = games.findIndex((game) => game.id === gameId)
-
-  if (gameIndex === -1) {
-    res.writeHead(404, {
-      'Content-Type': 'text/plain; charset=utf-8',
-    })
-    res.end('Игра не найдена')
-    return
-  }
-
-  const deletedGame = games.splice(gameIndex, 1)[0]
-
-  res.writeHead(200, {
-    'Content-Type': 'application/json; charset=utf-8',
-  })
-  res.end(JSON.stringify({
-    message: 'Игра успешно удалена',
-    game: deletedGame,
-  }))
-  return
-}
-
+  // Неизвестный маршрут
   res.writeHead(404, {
     'Content-Type': 'text/plain; charset=utf-8',
   })
@@ -264,7 +267,7 @@ const server = http.createServer((req, res) => {
   res.end('Страница не найдена')
 })
 
-// Запускает API на локальном порту 3000.
+// Запуск сервера
 server.listen(3000, () => {
   console.log('Сервер запущен: http://localhost:3000')
 })

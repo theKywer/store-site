@@ -20,7 +20,6 @@ import ToastViewport from './components/ToastViewport'
 
 import games from './data/game'
 
-/** Собирает приложение: маршруты, серверный список игр, корзину и избранное. */
 function App() {
   const [serverGames, setServerGames] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -34,9 +33,15 @@ function App() {
   const [deletingGameId, setDeletingGameId] = useState(null)
   const [deleteGameError, setDeleteGameError] = useState(null)
 
+  // Состояния редактирования игры
+  const [editingGameId, setEditingGameId] = useState(null)
+  const [editGameTitle, setEditGameTitle] = useState('')
+  const [editGamePrice, setEditGamePrice] = useState('')
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const [editGameError, setEditGameError] = useState(null)
+
   const [toasts, setToasts] = useState([])
 
-  // Восстанавливает избранное, оставляя только существующие ID игр.
   const [favoriteIds, setFavoriteIds] = useState(() => {
     try {
       const savedFavorites = JSON.parse(
@@ -52,7 +57,6 @@ function App() {
     }
   })
 
-  // Восстанавливает корзину, нормализует количество и обновляет данные игр.
   const [cartItems, setCartItems] = useState(() => {
     try {
       const savedCart = localStorage.getItem('cartItems')
@@ -94,10 +98,8 @@ function App() {
     }
   })
 
-  /** Загружает демонстрационный список игр с локального API. */
   // Получение игр с сервера
   useEffect(() => {
-    // Запрашивает список, сохраняет результат или текст ошибки и завершает загрузку.
     async function getGames() {
       try {
         const response = await fetch('http://localhost:3000/games')
@@ -119,7 +121,6 @@ function App() {
     getGames()
   }, [])
 
-  /** Отправляет новую игру в API и добавляет ответ в локальный список. */
   // Добавление игры на сервер
   async function addGameToServer(event) {
     event.preventDefault()
@@ -156,7 +157,6 @@ function App() {
     }
   }
 
-  /** Удаляет игру из API и синхронизирует список после успеха. */
   // Удаление игры с сервера
   async function deleteGameFromServer(gameId) {
     setDeletingGameId(gameId)
@@ -184,7 +184,64 @@ function App() {
     }
   }
 
-  // Синхронизирует актуальное состояние корзины с localStorage.
+  // Начало редактирования игры
+  function startEditingGame(game) {
+    setEditingGameId(game.id)
+    setEditGameTitle(game.title)
+    setEditGamePrice(String(game.price))
+    setEditGameError(null)
+  }
+
+  // Отмена редактирования
+  function cancelEditingGame() {
+    setEditingGameId(null)
+    setEditGameTitle('')
+    setEditGamePrice('')
+    setEditGameError(null)
+  }
+
+  // Сохранение изменений игры
+  async function saveGameChanges(event) {
+    event.preventDefault()
+
+    setIsSavingEdit(true)
+    setEditGameError(null)
+
+    try {
+      const response = await fetch(
+        `http://localhost:3000/games/${editingGameId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: editGameTitle.trim(),
+            price: Number(editGamePrice),
+          }),
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Не удалось сохранить изменения')
+      }
+
+      const updatedGame = await response.json()
+
+      setServerGames((currentGames) =>
+        currentGames.map((game) =>
+          game.id === updatedGame.id ? updatedGame : game
+        )
+      )
+
+      cancelEditingGame()
+    } catch (error) {
+      setEditGameError(error.message)
+    } finally {
+      setIsSavingEdit(false)
+    }
+  }
+
   useEffect(() => {
     try {
       localStorage.setItem('cartItems', JSON.stringify(cartItems))
@@ -193,7 +250,6 @@ function App() {
     }
   }, [cartItems])
 
-  // Синхронизирует актуальный список избранного с localStorage.
   useEffect(() => {
     try {
       localStorage.setItem('favoriteGameIds', JSON.stringify(favoriteIds))
@@ -202,7 +258,6 @@ function App() {
     }
   }, [favoriteIds])
 
-  /** Показывает временное уведомление о действии пользователя. */
   function notify(message, type = 'cart') {
     const id = `${Date.now()}-${Math.random()}`
 
@@ -226,7 +281,6 @@ function App() {
     }, 3050)
   }
 
-  /** Запускает закрытие выбранного уведомления. */
   function dismissToast(toastId) {
     setToasts((currentToasts) =>
       currentToasts.map((toast) =>
@@ -241,7 +295,6 @@ function App() {
     }, 350)
   }
 
-  /** Добавляет игру в избранное или убирает её оттуда. */
   function toggleFavorite(gameId) {
     const willBeFavorite = !favoriteIds.includes(gameId)
     const gameTitle = games.find((game) => game.id === gameId)?.title
@@ -260,7 +313,6 @@ function App() {
     )
   }
 
-  /** Добавляет игру в корзину или увеличивает её количество. */
   function addToCart(game) {
     const isAlreadyInCart = cartItems.some((item) => item.game.id === game.id)
 
@@ -288,7 +340,6 @@ function App() {
     )
   }
 
-  /** Увеличивает количество выбранной игры в корзине. */
   function increaseQuantity(gameId) {
     setCartItems((currentItems) =>
       currentItems.map((item) =>
@@ -299,7 +350,6 @@ function App() {
     )
   }
 
-  /** Уменьшает количество и удаляет позицию при достижении нуля. */
   function decreaseQuantity(gameId) {
     setCartItems((currentItems) =>
       currentItems
@@ -312,7 +362,6 @@ function App() {
     )
   }
 
-  /** Полностью удаляет выбранную игру из корзины. */
   function removeFromCart(gameId) {
     const removedGame = cartItems.find((item) => item.game.id === gameId)?.game
 
@@ -325,7 +374,6 @@ function App() {
     }
   }
 
-  // Считает общее количество копий игр для счётчика в шапке.
   const cartCount = cartItems.reduce(
     (total, item) => total + item.quantity,
     0
@@ -345,7 +393,6 @@ function App() {
           <form onSubmit={addGameToServer}>
             <div>
               <label htmlFor="game-title">Название игры</label>
-              {/* Сохраняет введённое название игры до отправки формы. */}
               <input
                 id="game-title"
                 type="text"
@@ -358,7 +405,6 @@ function App() {
 
             <div>
               <label htmlFor="game-price">Цена игры</label>
-              {/* Сохраняет введённую цену до отправки серверной формы. */}
               <input
                 id="game-price"
                 type="number"
@@ -376,9 +422,7 @@ function App() {
             </button>
           </form>
 
-          {addGameError && (
-            <p>Ошибка: {addGameError}</p>
-          )}
+          {addGameError && <p>Ошибка: {addGameError}</p>}
 
           <h2>Игры с сервера:</h2>
 
@@ -394,20 +438,81 @@ function App() {
             <p>Игры не найдены</p>
           )}
 
-          {/* Рендерит серверные игры и даёт удалить каждую запись. */}
           {!isLoading && !error && serverGames.map((game) => (
             <div key={game.id}>
-              <p>
-                {game.title} — {game.price} ₸
-              </p>
+              {editingGameId === game.id ? (
+                <form onSubmit={saveGameChanges}>
+                  <div>
+                    <label htmlFor={`edit-title-${game.id}`}>
+                      Название игры
+                    </label>
+                    <input
+                      id={`edit-title-${game.id}`}
+                      type="text"
+                      value={editGameTitle}
+                      onChange={(event) =>
+                        setEditGameTitle(event.target.value)
+                      }
+                      required
+                    />
+                  </div>
 
-              <button
-                type="button"
-                onClick={() => deleteGameFromServer(game.id)}
-                disabled={deletingGameId !== null}
-              >
-                {deletingGameId === game.id ? 'Удаление...' : 'Удалить'}
-              </button>
+                  <div>
+                    <label htmlFor={`edit-price-${game.id}`}>
+                      Цена игры
+                    </label>
+                    <input
+                      id={`edit-price-${game.id}`}
+                      type="number"
+                      value={editGamePrice}
+                      onChange={(event) =>
+                        setEditGamePrice(event.target.value)
+                      }
+                      min="0"
+                      step="1"
+                      required
+                    />
+                  </div>
+
+                  <button type="submit" disabled={isSavingEdit}>
+                    {isSavingEdit ? 'Сохранение...' : 'Сохранить'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={cancelEditingGame}
+                    disabled={isSavingEdit}
+                  >
+                    Отмена
+                  </button>
+
+                  {editGameError && (
+                    <p>Ошибка: {editGameError}</p>
+                  )}
+                </form>
+              ) : (
+                <>
+                  <p>
+                    {game.title} — {game.price} ₸
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => startEditingGame(game)}
+                    disabled={deletingGameId !== null || isSavingEdit}
+                  >
+                    Редактировать
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => deleteGameFromServer(game.id)}
+                    disabled={deletingGameId !== null || isSavingEdit}
+                  >
+                    {deletingGameId === game.id ? 'Удаление...' : 'Удалить'}
+                  </button>
+                </>
+              )}
             </div>
           ))}
         </div>
