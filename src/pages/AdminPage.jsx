@@ -1,7 +1,30 @@
 
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/auth.js'
+
+async function readAdminResponse(response, fallbackMessage) {
+  const data = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    const error = new Error(
+      data.message ||
+      (response.status === 401
+        ? 'Сеанс истёк. Войди в аккаунт ещё раз.'
+        : response.status === 403
+          ? 'Недостаточно прав для управления каталогом.'
+          : fallbackMessage),
+    )
+    error.status = response.status
+    throw error
+  }
+
+  return data
+}
 
 function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
+  const { token, logout } = useAuth()
+  const navigate = useNavigate()
   const [gameTitle, setGameTitle] = useState('')
   const [gamePrice, setGamePrice] = useState('')
   const [isAdding, setIsAdding] = useState(false)
@@ -16,6 +39,20 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
   const [deletingGameId, setDeletingGameId] = useState(null)
   const [deleteGameError, setDeleteGameError] = useState(null)
 
+  function handleRequestError(requestError, setError) {
+    if (requestError.status === 401) {
+      logout()
+      navigate('/login', {
+        replace: true,
+        state: { message: requestError.message },
+      })
+      return
+    }
+
+    // Для 403 и остальных ошибок оставляем пользователя в панели и показываем причину.
+    setError(requestError.message)
+  }
+
   // Добавление игры
   async function addGame(event) {
     event.preventDefault()
@@ -28,6 +65,7 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           title: gameTitle.trim(),
@@ -35,18 +73,14 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
         }),
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Не удалось добавить игру')
-      }
+      const data = await readAdminResponse(response, 'Не удалось добавить игру')
 
       setGames((currentGames) => [...currentGames, data])
 
       setGameTitle('')
       setGamePrice('')
     } catch (error) {
-      setAddGameError(error.message)
+      handleRequestError(error, setAddGameError)
     } finally {
       setIsAdding(false)
     }
@@ -80,6 +114,7 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           title: editGameTitle.trim(),
@@ -87,11 +122,7 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
         }),
       })
 
-      const updatedGame = await response.json()
-
-      if (!response.ok) {
-        throw new Error(updatedGame.message || 'Не удалось изменить игру')
-      }
+      const updatedGame = await readAdminResponse(response, 'Не удалось изменить игру')
 
       setGames((currentGames) =>
         currentGames.map((game) =>
@@ -103,7 +134,7 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
 
       cancelEditing()
     } catch (error) {
-      setEditGameError(error.message)
+      handleRequestError(error, setEditGameError)
     } finally {
       setIsSavingEdit(false)
     }
@@ -123,13 +154,12 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
     try {
       const response = await fetch(`/api/games/${gameId}`, {
         method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Не удалось удалить игру')
-      }
+      await readAdminResponse(response, 'Не удалось удалить игру')
 
       setGames((currentGames) =>
         currentGames.filter((game) => game.id !== gameId),
@@ -137,7 +167,7 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
 
       onGameDeleted(gameId)
     } catch (error) {
-      setDeleteGameError(error.message)
+      handleRequestError(error, setDeleteGameError)
     } finally {
       setDeletingGameId(null)
     }

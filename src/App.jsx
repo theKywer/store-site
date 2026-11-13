@@ -17,6 +17,9 @@ import GamePage from './pages/GamePage'
 import FavoritesPage from './pages/FavoritesPage'
 import NotFoundPage from './pages/NotFoundPage'
 import AdminPage from './pages/AdminPage'
+import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
+import RequireAdmin from './components/RequireAdmin'
 
 import ToastViewport from './components/ToastViewport'
 
@@ -341,6 +344,8 @@ function App() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/support" element={<SupportPage />} />
           <Route path="/legal" element={<LegalPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
 
           <Route
             path="/game/:id"
@@ -357,13 +362,15 @@ function App() {
           <Route
             path="/admin"
             element={
-              <AdminPage
-                games={games}
-                isLoading={isLoading}
-                error={error}
-                setGames={handleGamesChange}
-                onGameDeleted={handleGameDeleted}
-              />
+              <RequireAdmin>
+                <AdminPage
+                  games={games}
+                  isLoading={isLoading}
+                  error={error}
+                  setGames={handleGamesChange}
+                  onGameDeleted={handleGameDeleted}
+                />
+              </RequireAdmin>
             }
           />
 
