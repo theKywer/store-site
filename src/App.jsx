@@ -13,6 +13,7 @@ import SupportPage from './pages/SupportPage'
 import LegalPage from './pages/LegalPage'
 import GamePage from './pages/GamePage'
 import FavoritesPage from './pages/FavoritesPage'
+import NotFoundPage from './pages/NotFoundPage'
 import ToastViewport from './components/ToastViewport'
 
 import games from './data/game'
@@ -263,6 +264,8 @@ function App() {
               />
             }
           />
+
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
 
