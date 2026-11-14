@@ -34,6 +34,7 @@ function Header({ cartCount, favoriteCount }) {
       <nav className="navigation">
         <Link to="/#discounts">Скидки</Link>
         <Link to="/about">О нас</Link>
+        {isAuthenticated && <Link to="/orders/my">Мои заказы</Link>}
         {isAuthenticated && user.role === 'ADMIN' && (
           <Link to="/admin">Админ-панель</Link>
         )}

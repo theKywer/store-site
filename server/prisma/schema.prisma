@@ -1,3 +1,4 @@
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -6,24 +7,31 @@ datasource db {
   provider = "postgresql"
 }
 
-model Game {
-  id               Int        @id @default(autoincrement())
-  title            String
-  price            Int
-  oldPrice         Int?
-  discount         Int        @default(0)
-  badge            String?
-  genre            String
-  description      String     @db.Text
-  image            String
-  officialTrailerId String
-  developer        String
-  publisher        String
-  releaseDate      String
-  ageRating        String
-  platform         String
+enum OrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
 
-  gallery          GameMedia[]
+model Game {
+  id                Int         @id @default(autoincrement())
+  title             String
+  price             Int
+  oldPrice          Int?
+  discount          Int         @default(0)
+  badge             String?
+  genre             String
+  description       String      @db.Text
+  image             String
+  officialTrailerId String
+  developer         String
+  publisher         String
+  releaseDate       String
+  ageRating         String
+  platform          String
+
+  gallery           GameMedia[]
+  orderItems        OrderItem[]
 }
 
 model GameMedia {
@@ -38,12 +46,46 @@ model GameMedia {
   game       Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
 }
 
-
-
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
-  password     String
-  role         String   @default("USER")
-  createdAt    DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  email      String   @unique
+  password   String
+  role       String   @default("USER")
+  createdAt  DateTime @default(now())
+
+  orders     Order[]
+}
+
+model Order {
+  id          Int         @id @default(autoincrement())
+  userId      Int
+  totalAmount Int
+  status      OrderStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items       OrderItem[]
+}
+
+model OrderItem {
+  id        Int   @id @default(autoincrement())
+  orderId   Int
+  gameId    Int?
+  gameTitle String
+  quantity  Int
+  unitPrice Int
+
+  order     Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  game      Game?          @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  keys      OrderItemKey[]
+}
+
+model OrderItemKey {
+  id          Int      @id @default(autoincrement())
+  orderItemId Int
+  code        String   @unique
+  createdAt   DateTime @default(now())
+
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
 }

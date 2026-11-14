@@ -37,7 +37,7 @@ function LoginPage() {
       }
 
       login(data.token, data.user)
-      navigate('/', { replace: true })
+      navigate(location.state?.from || '/', { replace: true })
     } catch (requestError) {
       setError(requestError.message || 'Не удалось связаться с сервером.')
     } finally {

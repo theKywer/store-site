@@ -189,9 +189,9 @@ function CartPage({
             </div>
           )}
 
-          <button type="button" className="checkout-button">
-            Перейти к оформлению
-          </button>
+          <Link to="/checkout" className="checkout-button">
+            Оформить заказ
+          </Link>
         </aside>
       </div>
     </section>

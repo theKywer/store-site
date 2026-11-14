@@ -19,6 +19,8 @@ import NotFoundPage from './pages/NotFoundPage'
 import AdminPage from './pages/AdminPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import CheckoutPage from './pages/CheckoutPage'
+import MyOrdersPage from './pages/MyOrdersPage'
 import RequireAdmin from './components/RequireAdmin'
 
 import ToastViewport from './components/ToastViewport'
@@ -340,6 +342,17 @@ function App() {
               />
             }
           />
+
+          <Route
+            path="/checkout"
+            element={
+              <CheckoutPage
+                cartItems={cartItems}
+                onOrderPaid={() => setCartItems([])}
+              />
+            }
+          />
+          <Route path="/orders/my" element={<MyOrdersPage />} />
 
           <Route path="/about" element={<AboutPage />} />
           <Route path="/support" element={<SupportPage />} />

@@ -1,39 +1,120 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+
 import './GamePage.css'
 
-/** Показывает сведения об игре и галерею её изображений и видео. */
+// Получает YouTube ID из ссылки или возвращает переданный ID.
+function getYouTubeId(value) {
+  if (!value) return null
+
+  const input = value.trim()
+
+  if (!input) return null
+
+  const match = input.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+  )
+
+  if (match) return match[1]
+
+  if (/^[a-zA-Z0-9_-]{11}$/.test(input)) {
+    return input
+  }
+
+  return null
+}
+
+// Проверяет, является ли видео YouTube-видео.
+function isYouTubeVideo(media) {
+  return (
+    (media.type === 'video' || media.type === 'youtube') &&
+    Boolean(getYouTubeId(media.src))
+  )
+}
+
+// Создаёт адрес YouTube-плеера.
+function getYouTubeEmbedUrl(src) {
+  const videoId = getYouTubeId(src)
+
+  return videoId
+    ? `https://www.youtube-nocookie.com/embed/${videoId}`
+    : ''
+}
+
+function getYouTubeThumbnail(src) {
+  const videoId = getYouTubeId(src)
+
+  return videoId
+    ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+    : ''
+}
+
 function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
   const { id } = useParams()
-  // Находит игру по ID из адреса страницы.
-  const game = games.find((game) => game.id === Number(id))
-  const isFavorite = game ? favoriteIds.includes(game.id) : false
-  const [mediaState, setMediaState] = useState({ gameId: null, items: [] })
+
+  const game = games.find((item) => item.id === Number(id))
+
+  const isFavorite = game
+    ? favoriteIds.includes(game.id)
+    : false
+
+  const [mediaState, setMediaState] = useState({
+    gameId: null,
+    items: [],
+  })
+
   const [activeMediaIndex, setActiveMediaIndex] = useState(0)
-  const media = mediaState.gameId === game?.id ? mediaState.items : []
+
+  const media = mediaState.gameId === game?.id
+    ? mediaState.items
+    : []
+
+  // Получаем Steam App ID из адреса обложки.
   const steamAppId = game?.image.match(/\/apps\/(\d+)/)?.[1]
-  // Готовит запасные изображения Steam, если у игры нет заданной галереи.
-  const fallbackMedia = steamAppId
-    ? [
-        { type: 'image', src: game.image, thumbnail: game.image, alt: game.title },
-        ...['library_hero.jpg', 'capsule_616x353.jpg', 'library_600x900.jpg'].map(
-          (file) => ({
+
+  // Запасная галерея Steam.
+  const fallbackMedia = game
+    ? steamAppId
+      ? [
+          {
             type: 'image',
-            src: `https://cdn.akamai.steamstatic.com/steam/apps/${steamAppId}/${file}`,
-            thumbnail: `https://cdn.akamai.steamstatic.com/steam/apps/${steamAppId}/${file}`,
-            alt: `${game.title} — арт`,
+            src: game.image,
+            thumbnail: game.image,
+            alt: game.title,
+          },
+          ...[
+            'library_hero.jpg',
+            'capsule_616x353.jpg',
+            'library_600x900.jpg',
+          ].map((file) => {
+            const url = `https://cdn.akamai.steamstatic.com/steam/apps/${steamAppId}/${file}`
+
+            return {
+              type: 'image',
+              src: url,
+              thumbnail: url,
+              alt: `${game.title} — арт`,
+            }
           }),
-        ),
-      ]
-    : [{ type: 'image', src: game?.image, thumbnail: game?.image, alt: game?.title }]
-  // Создаёт галерею трейлера и кадров с YouTube, если указан ID трейлера.
+        ]
+      : [
+          {
+            type: 'image',
+            src: game.image,
+            thumbnail: game.image,
+            alt: game.title,
+          },
+        ]
+    : []
+
+  // Галерея официального трейлера YouTube.
   const officialTrailerGallery = game?.officialTrailerId
     ? [
         {
           type: 'youtube',
-          src: `https://www.youtube-nocookie.com/embed/${game.officialTrailerId}`,
-          thumbnail: `https://img.youtube.com/vi/${game.officialTrailerId}/maxresdefault.jpg`,
+          src: game.officialTrailerId,
+          thumbnail: getYouTubeThumbnail(game.officialTrailerId),
           alt: `${game.title} — официальный трейлер`,
         },
         ...[
@@ -43,29 +124,41 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
           'maxresdefault.jpg',
           'hq720.jpg',
         ].map((frame, index) => ({
-            type: 'image',
-            src: `https://img.youtube.com/vi/${game.officialTrailerId}/${frame}`,
-            thumbnail: `https://img.youtube.com/vi/${game.officialTrailerId}/${frame}`,
-            alt: `${game.title} — кадр ${index + 1} официального трейлера`,
-          })),
+          type: 'image',
+          src: `https://img.youtube.com/vi/${game.officialTrailerId}/${frame}`,
+          thumbnail: `https://img.youtube.com/vi/${game.officialTrailerId}/${frame}`,
+          alt: `${game.title} — кадр ${index + 1} официального трейлера`,
+        })),
       ]
     : []
-  // Выбирает галерею: заданную в данных, трейлерную, загруженную или запасную.
+
+  // Выбираем галерею в зависимости от доступных данных.
   const galleryMedia = game?.gallery?.length
-    ? [...game.gallery, ...officialTrailerGallery.slice(1, 5)]
+    ? [
+        ...game.gallery,
+        ...officialTrailerGallery.slice(1, 5),
+      ]
     : officialTrailerGallery.length > 0
       ? officialTrailerGallery
-    : media.length > 0
-      ? media
-      : fallbackMedia
-  // Защищает отображение от индекса, который вышел за пределы галереи.
-  const visibleMediaIndex = galleryMedia[activeMediaIndex] ? activeMediaIndex : 0
+      : media.length > 0
+        ? media
+        : fallbackMedia
 
-  // Загружает медиа из Steam, если игра не содержит собственную галерею.
+  const visibleMediaIndex = galleryMedia[activeMediaIndex]
+    ? activeMediaIndex
+    : 0
+
+  const activeMedia = galleryMedia[visibleMediaIndex]
+
+  // Сбрасываем выбранный элемент при переключении игры.
+  useEffect(() => {
+    setActiveMediaIndex(0)
+  }, [game?.id])
+
+  // Загружаем дополнительные материалы Steam.
   useEffect(() => {
     if (!game) return
     if (game.gallery?.length || game.officialTrailerId) return
-
     if (!steamAppId) return
 
     const controller = new AbortController()
@@ -74,22 +167,27 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
       `https://store.steampowered.com/api/appdetails?appids=${steamAppId}&l=english`,
       { signal: controller.signal },
     )
-      // Преобразует успешный HTTP-ответ в JSON с данными игры.
       .then((response) => {
-        if (!response.ok) throw new Error('Не удалось загрузить медиа игры')
+        if (!response.ok) {
+          throw new Error('Не удалось загрузить медиа игры')
+        }
+
         return response.json()
       })
-      // Превращает скриншоты и трейлер Steam в элементы галереи.
       .then((result) => {
         const details = result[steamAppId]?.data
+
         if (!details) return
 
-        const screenshots = (details.screenshots ?? []).map((screenshot) => ({
-          type: 'image',
-          thumbnail: screenshot.path_thumbnail,
-          src: screenshot.path_full,
-          alt: `${game.title} — скриншот`,
-        }))
+        const screenshots = (details.screenshots ?? []).map(
+          (screenshot) => ({
+            type: 'image',
+            thumbnail: screenshot.path_thumbnail,
+            src: screenshot.path_full,
+            alt: `${game.title} — скриншот`,
+          }),
+        )
+
         const trailers = (details.movies ?? [])
           .map((movie) => ({
             type: 'video',
@@ -105,17 +203,21 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
 
         setMediaState({
           gameId: game.id,
-          items: [...trailers.slice(0, 1), ...screenshots],
+          items: [
+            ...trailers.slice(0, 1),
+            ...screenshots,
+          ],
         })
       })
-      // При сетевой ошибке оставляет доступной запасную галерею.
-      .catch((error) => {
-        if (error.name !== 'AbortError') {
-          setMediaState({ gameId: game.id, items: [] })
+      .catch((requestError) => {
+        if (requestError.name !== 'AbortError') {
+          setMediaState({
+            gameId: game.id,
+            items: [],
+          })
         }
       })
 
-    // Отменяет запрос при смене игры или уходе со страницы.
     return () => controller.abort()
   }, [game, steamAppId])
 
@@ -137,118 +239,134 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
       <div className="game-page-content">
         <div className="game-page-gallery">
           <div className="game-page-image-wrapper">
-            {galleryMedia[visibleMediaIndex]?.type === 'youtube' ? (
+            {activeMedia && isYouTubeVideo(activeMedia) ? (
               <iframe
                 className="game-page-image game-page-video-embed"
-                src={galleryMedia[visibleMediaIndex].src}
-                title={galleryMedia[visibleMediaIndex].alt}
+                src={getYouTubeEmbedUrl(activeMedia.src)}
+                title={activeMedia.alt || game.title}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 referrerPolicy="strict-origin-when-cross-origin"
                 allowFullScreen
               />
-            ) : galleryMedia[visibleMediaIndex]?.type === 'video' ? (
+            ) : activeMedia?.type === 'video' ? (
               <video
+                key={activeMedia.src}
                 className="game-page-image"
-                src={galleryMedia[visibleMediaIndex].src}
-                poster={galleryMedia[visibleMediaIndex].thumbnail}
+                src={activeMedia.src}
+                poster={activeMedia.thumbnail || undefined}
                 controls
                 playsInline
                 preload="metadata"
-                aria-label={galleryMedia[visibleMediaIndex].alt}
+                aria-label={activeMedia.alt || game.title}
               />
             ) : (
               <img
-                key={`${visibleMediaIndex}-${galleryMedia[visibleMediaIndex]?.src}`}
+                key={`${visibleMediaIndex}-${activeMedia?.src}`}
                 className="game-page-image"
-                src={galleryMedia[visibleMediaIndex]?.src ?? game.image}
-                alt={galleryMedia[visibleMediaIndex]?.alt ?? game.title}
+                src={activeMedia?.src || game.image}
+                alt={activeMedia?.alt || game.title}
                 onError={(event) => {
                   const image = event.currentTarget
-                  if (image.src.includes('img.youtube.com')) {
-                    const frameBase = galleryMedia[visibleMediaIndex].src.replace(
-                      /\/[^/]+$/,
-                      '/',
-                    )
-                    if (!image.dataset.fallback) {
-                      image.dataset.fallback = 'maxres'
-                      image.src = `${frameBase}maxresdefault.jpg`
-                      return
-                    }
-                    if (image.dataset.fallback === 'maxres') {
-                      image.dataset.fallback = 'hq'
-                      image.src = `${frameBase}hqdefault.jpg`
-                      return
-                    }
+
+                  if (image.dataset.fallbackAttempted) {
+                    image.alt = ''
+                    return
                   }
-                  image.hidden = true
+
+                  image.dataset.fallbackAttempted = 'true'
+                  if (image.src !== game.image) {
+                    image.src = game.image
+                  } else {
+                    image.alt = ''
+                  }
                 }}
               />
             )}
+
             {game.badge && (
-              <span className="game-page-badge">{game.badge}</span>
+              <span className="game-page-badge">
+                {game.badge}
+              </span>
             )}
+
             {game.discount > 0 && (
-              <span className="game-page-discount">-{game.discount}%</span>
+              <span className="game-page-discount">
+                -{game.discount}%
+              </span>
             )}
           </div>
+
           {galleryMedia.length > 0 && (
-            <div className="game-page-gallery-strip" aria-label="Галерея игры">
-              {galleryMedia.map((item, index) => (
-                <button
-                  className={`game-page-gallery-item${index === visibleMediaIndex ? ' is-active' : ''}`}
-                  key={`${item.type}-${item.src}`}
-                  type="button"
-                  onClick={() => setActiveMediaIndex(index)}
-                  aria-label={
-                    item.type === 'video' || item.type === 'youtube'
-                      ? 'Воспроизвести трейлер'
-                      : `Показать скриншот ${index}`
-                  }
-                  aria-pressed={index === visibleMediaIndex}
-                >
-                  <img
-                    src={item.thumbnail}
-                    alt=""
-                    loading="lazy"
-                    onError={(event) => {
-                      const image = event.currentTarget
-                      if (image.src.includes('img.youtube.com')) {
-                        const frameBase = item.src.replace(/\/[^/]+$/, '/')
-                        if (!image.dataset.fallback) {
-                          image.dataset.fallback = 'maxres'
-                          image.src = `${frameBase}maxresdefault.jpg`
-                          return
-                        }
-                        if (image.dataset.fallback === 'maxres') {
-                          image.dataset.fallback = 'hq'
-                          image.src = `${frameBase}hqdefault.jpg`
-                          return
-                        }
-                      }
-                      image.closest('button').hidden = true
-                    }}
-                  />
-                  {(item.type === 'video' || item.type === 'youtube') && (
-                    <span className="game-page-play-icon" aria-hidden="true">
-                      ▶
-                    </span>
-                  )}
-                </button>
-              ))}
+            <div
+              className="game-page-gallery-strip"
+              aria-label="Галерея игры"
+            >
+              {galleryMedia.map((item, index) => {
+                const youtube = isYouTubeVideo(item)
+
+                const thumbnail =
+                  item.thumbnail ||
+                  (youtube
+                    ? getYouTubeThumbnail(item.src)
+                    : item.src)
+
+                return (
+                  <button
+                    className={`game-page-gallery-item${
+                      index === visibleMediaIndex ? ' is-active' : ''
+                    }`}
+                    key={`${item.type}-${item.src}-${index}`}
+                    type="button"
+                    onClick={() => setActiveMediaIndex(index)}
+                    aria-label={
+                      item.type === 'video' || item.type === 'youtube'
+                        ? 'Воспроизвести трейлер'
+                        : `Показать скриншот ${index + 1}`
+                    }
+                    aria-pressed={index === visibleMediaIndex}
+                  >
+                    {thumbnail && (
+                      <img
+                        src={thumbnail}
+                        alt=""
+                        loading="lazy"
+                      />
+                    )}
+
+                    {(item.type === 'video' || item.type === 'youtube') && (
+                      <span
+                        className="game-page-play-icon"
+                        aria-hidden="true"
+                      >
+                        ▶
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>
 
         <div className="game-page-info">
-          <span className="section-label">{game.genre}</span>
+          <span className="section-label">
+            {game.genre}
+          </span>
 
           <div className="game-page-title-row">
             <h1>{game.title}</h1>
+
             <button
               type="button"
-              className={`favorite-toggle game-page-favorite${isFavorite ? ' is-favorite' : ''}`}
+              className={`favorite-toggle game-page-favorite${
+                isFavorite ? ' is-favorite' : ''
+              }`}
               onClick={() => onToggleFavorite(game.id)}
-              aria-label={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
+              aria-label={
+                isFavorite
+                  ? 'Убрать из избранного'
+                  : 'Добавить в избранное'
+              }
               aria-pressed={isFavorite}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -288,12 +406,16 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
 
           <div className="game-page-purchase">
             <div className="game-page-price">
-              {game.discount > 0 && game.oldPrice > game.price && (
-                <span className="game-page-old-price">
-                  {game.oldPrice.toLocaleString('ru-RU')} ₸
-                </span>
-              )}
-              <strong>{game.price.toLocaleString('ru-RU')} ₸</strong>
+              {game.discount > 0 &&
+                game.oldPrice > game.price && (
+                  <span className="game-page-old-price">
+                    {game.oldPrice.toLocaleString('ru-RU')} ₸
+                  </span>
+                )}
+
+              <strong>
+                {game.price.toLocaleString('ru-RU')} ₸
+              </strong>
             </div>
 
             <button onClick={() => onAddToCart(game)}>
