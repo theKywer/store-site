@@ -9,11 +9,56 @@ const bcrypt = require('bcrypt')
 const prisma = require('./prisma')
 
 const app = express()
+const POSTGRES_INT_MAX = 2147483647
+const MAX_GALLERY_ITEMS = 20
+const MAX_MEDIA_SOURCE_LENGTH = 2048
+const MAX_MEDIA_ALT_LENGTH = 500
+const MAX_KEY_INSERT_ATTEMPTS = 3
+const DEMO_KEY_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 
-app.use(express.json())
+app.use(express.json({ limit: '100kb' }))
+
+app.use((error, req, res, next) => {
+  if (error.type === 'entity.parse.failed') {
+    return res.status(400).json({
+      message: 'Некорректный JSON в теле запроса',
+    })
+  }
+
+  if (error.type === 'entity.too.large') {
+    return res.status(413).json({
+      message: 'Тело запроса слишком большое',
+    })
+  }
+
+  next(error)
+})
+
+function hasObjectBody(body) {
+  return body !== null && typeof body === 'object' && !Array.isArray(body)
+}
+
+function isPostgresInt(value) {
+  return Number.isSafeInteger(value) &&
+    value >= -POSTGRES_INT_MAX - 1 &&
+    value <= POSTGRES_INT_MAX
+}
+
+function parsePostgresId(value) {
+  if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value)) {
+    return null
+  }
+
+  const id = Number(value)
+
+  return isPostgresInt(id) ? id : null
+}
 
 function generateDemoKey() {
-  const value = crypto.randomBytes(4).toString('hex').toUpperCase()
+  const value = Array.from(
+    { length: 8 },
+    () => DEMO_KEY_ALPHABET[crypto.randomInt(DEMO_KEY_ALPHABET.length)],
+  ).join('')
 
   return `${value.slice(0, 4)}-${value.slice(4)}`
 }
@@ -59,7 +104,7 @@ function validateGameData(body, isPartial = false) {
   // Цена
   if (!isPartial || body.price !== undefined) {
     if (
-      !Number.isSafeInteger(body.price) ||
+      !isPostgresInt(body.price) ||
       body.price < 0
     ) {
       return {
@@ -74,7 +119,7 @@ function validateGameData(body, isPartial = false) {
   if (body.oldPrice !== undefined) {
     if (
       body.oldPrice !== null &&
-      (!Number.isSafeInteger(body.oldPrice) || body.oldPrice < 0)
+      (!isPostgresInt(body.oldPrice) || body.oldPrice < 0)
     ) {
       return {
         error: 'Некорректная старая цена',
@@ -127,27 +172,36 @@ function validateGameData(body, isPartial = false) {
       }
     }
 
+    if (body.gallery.length > MAX_GALLERY_ITEMS) {
+      return {
+        error: `В галерее должно быть не более ${MAX_GALLERY_ITEMS} элементов`,
+      }
+    }
+
     const gallery = []
+    const allowedMediaTypes = new Set(['image', 'video', 'youtube'])
 
     for (let index = 0; index < body.gallery.length; index++) {
       const media = body.gallery[index]
+      const type = typeof media?.type === 'string' ? media.type.trim() : ''
+      const src = typeof media?.src === 'string' ? media.src.trim() : ''
 
       if (
         !media ||
-        typeof media.type !== 'string' ||
-        !media.type.trim() ||
-        typeof media.src !== 'string' ||
-        !media.src.trim()
+        !allowedMediaTypes.has(type) ||
+        !src ||
+        src.length > MAX_MEDIA_SOURCE_LENGTH
       ) {
         return {
-          error: `Некорректный элемент галереи №${index + 1}`,
+          error: `Некорректный тип или источник элемента галереи №${index + 1}`,
         }
       }
 
       if (
         media.thumbnail !== undefined &&
         media.thumbnail !== null &&
-        typeof media.thumbnail !== 'string'
+        (typeof media.thumbnail !== 'string' ||
+          media.thumbnail.trim().length > MAX_MEDIA_SOURCE_LENGTH)
       ) {
         return {
           error: 'Некорректная миниатюра галереи',
@@ -157,7 +211,8 @@ function validateGameData(body, isPartial = false) {
       if (
         media.alt !== undefined &&
         media.alt !== null &&
-        typeof media.alt !== 'string'
+        (typeof media.alt !== 'string' ||
+          media.alt.trim().length > MAX_MEDIA_ALT_LENGTH)
       ) {
         return {
           error: 'Некорректное описание изображения',
@@ -166,17 +221,17 @@ function validateGameData(body, isPartial = false) {
 
       const sortOrder = media.sortOrder ?? index
 
-      if (!Number.isInteger(sortOrder) || sortOrder < 0) {
+      if (!isPostgresInt(sortOrder) || sortOrder < 0) {
         return {
           error: 'Некорректный порядок элементов галереи',
         }
       }
 
       gallery.push({
-        type: media.type.trim(),
-        src: media.src.trim(),
-        thumbnail: media.thumbnail ?? null,
-        alt: media.alt ?? null,
+        type,
+        src,
+        thumbnail: media.thumbnail?.trim() || null,
+        alt: media.alt?.trim() || null,
         sortOrder,
       })
     }
@@ -207,6 +262,12 @@ app.get('/contact', (req, res) => {
 // Регистрация пользователя
 app.post('/auth/register', async (req, res) => {
   try {
+    if (!hasObjectBody(req.body)) {
+      return res.status(400).json({
+        message: 'Тело запроса должно быть JSON-объектом',
+      })
+    }
+
     const { email, password } = req.body
 
     if (
@@ -281,6 +342,12 @@ app.post('/auth/register', async (req, res) => {
 // Вход пользователя
 app.post('/auth/login', async (req, res) => {
   try {
+    if (!hasObjectBody(req.body)) {
+      return res.status(400).json({
+        message: 'Тело запроса должно быть JSON-объектом',
+      })
+    }
+
     const { email, password } = req.body
 
     if (
@@ -372,9 +439,9 @@ app.get('/games', async (req, res) => {
 // Получение одной игры
 app.get('/games/:id', async (req, res) => {
   try {
-    const gameId = Number(req.params.id)
+    const gameId = parsePostgresId(req.params.id)
 
-    if (!Number.isInteger(gameId) || gameId <= 0) {
+    if (gameId === null) {
       return res.status(400).json({
         message: 'Некорректный ID игры',
       })
@@ -451,9 +518,9 @@ app.post('/games', authMiddleware, adminMiddleware, async (req, res) => {
 // Редактирование игры
 app.patch('/games/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const gameId = Number(req.params.id)
+    const gameId = parsePostgresId(req.params.id)
 
-    if (!Number.isInteger(gameId) || gameId <= 0) {
+    if (gameId === null) {
       return res.status(400).json({
         message: 'Некорректный ID игры',
       })
@@ -523,9 +590,9 @@ app.patch('/games/:id', authMiddleware, adminMiddleware, async (req, res) => {
 // Удаление игры
 app.delete('/games/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const gameId = Number(req.params.id)
+    const gameId = parsePostgresId(req.params.id)
 
-    if (!Number.isInteger(gameId) || gameId <= 0) {
+    if (gameId === null) {
       return res.status(400).json({
         message: 'Некорректный ID игры',
       })
@@ -565,10 +632,16 @@ app.delete('/games/:id', authMiddleware, adminMiddleware, async (req, res) => {
 // Создание заказа
 app.post('/orders', authMiddleware, async (req, res) => {
   try {
-    const userId = Number(req.user.id)
+    if (!hasObjectBody(req.body)) {
+      return res.status(400).json({
+        message: 'Тело запроса должно быть JSON-объектом',
+      })
+    }
+
+    const userId = req.user.id
     const { items } = req.body
 
-    if (!Number.isInteger(userId) || userId <= 0) {
+    if (!isPostgresInt(userId) || userId <= 0) {
       return res.status(401).json({
         message: 'Некорректные данные пользователя',
       })
@@ -585,7 +658,7 @@ app.post('/orders', authMiddleware, async (req, res) => {
     for (const item of items) {
       if (
         !item ||
-        !Number.isInteger(item.gameId) ||
+        !isPostgresInt(item.gameId) ||
         item.gameId <= 0 ||
         !Number.isInteger(item.quantity) ||
         item.quantity <= 0 ||
@@ -627,6 +700,13 @@ app.post('/orders', authMiddleware, async (req, res) => {
 
         const itemTotal = game.price * item.quantity
 
+        if (
+          !Number.isSafeInteger(itemTotal) ||
+          itemTotal > POSTGRES_INT_MAX - totalAmount
+        ) {
+          throw new Error('INVALID_TOTAL')
+        }
+
         totalAmount += itemTotal
 
         return {
@@ -637,7 +717,7 @@ app.post('/orders', authMiddleware, async (req, res) => {
         }
       })
 
-      if (!Number.isSafeInteger(totalAmount)) {
+      if (!isPostgresInt(totalAmount) || totalAmount < 0) {
         throw new Error('INVALID_TOTAL')
       }
 
@@ -683,97 +763,110 @@ app.post('/orders', authMiddleware, async (req, res) => {
 // Оплата заказа и выдача демо-ключей
 app.post('/orders/:id/pay', authMiddleware, async (req, res) => {
   try {
-    const orderId = Number(req.params.id)
-    const userId = Number(req.user.id)
+    const orderId = parsePostgresId(req.params.id)
+    const userId = req.user.id
 
-    if (!Number.isInteger(orderId) || orderId <= 0) {
+    if (orderId === null) {
       return res.status(400).json({
         message: 'Некорректный ID заказа',
       })
     }
 
-    if (!Number.isInteger(userId) || userId <= 0) {
+    if (!isPostgresInt(userId) || userId <= 0) {
       return res.status(401).json({
         message: 'Некорректные данные пользователя',
       })
     }
 
-    const order = await prisma.$transaction(async (tx) => {
-      const existingOrder = await tx.order.findFirst({
-        where: {
-          id: orderId,
-          userId,
-        },
-        include: {
-          items: true,
-        },
-      })
+    let order
 
-      if (!existingOrder) {
-        throw new Error('ORDER_NOT_FOUND')
-      }
-
-      if (existingOrder.status === 'PAID') {
-        throw new Error('ORDER_ALREADY_PAID')
-      }
-
-      if (existingOrder.status === 'CANCELLED') {
-        throw new Error('ORDER_CANCELLED')
-      }
-
-      const updated = await tx.order.updateMany({
-        where: {
-          id: orderId,
-          userId,
-          status: 'PENDING',
-        },
-        data: {
-          status: 'PAID',
-        },
-      })
-
-      if (updated.count !== 1) {
-        throw new Error('ORDER_ALREADY_PROCESSED')
-      }
-
-      const keys = []
-      const generatedCodes = new Set()
-
-      for (const item of existingOrder.items) {
-        for (let copy = 0; copy < item.quantity; copy++) {
-          let code
-
-          do {
-            code = generateDemoKey()
-          } while (generatedCodes.has(code))
-
-          generatedCodes.add(code)
-          keys.push({
-            orderItemId: item.id,
-            code,
+    // При конфликте уникального ключа Prisma откатывает транзакцию целиком;
+    // повторяем её с новой генерацией ключей.
+    for (let attempt = 0; attempt < MAX_KEY_INSERT_ATTEMPTS; attempt++) {
+      try {
+        order = await prisma.$transaction(async (tx) => {
+          const existingOrder = await tx.order.findFirst({
+            where: {
+              id: orderId,
+              userId,
+            },
+            include: {
+              items: true,
+            },
           })
+
+          if (!existingOrder) {
+            throw new Error('ORDER_NOT_FOUND')
+          }
+
+          if (existingOrder.status === 'PAID') {
+            throw new Error('ORDER_ALREADY_PAID')
+          }
+
+          if (existingOrder.status === 'CANCELLED') {
+            throw new Error('ORDER_CANCELLED')
+          }
+
+          const updated = await tx.order.updateMany({
+            where: {
+              id: orderId,
+              userId,
+              status: 'PENDING',
+            },
+            data: {
+              status: 'PAID',
+            },
+          })
+
+          if (updated.count !== 1) {
+            throw new Error('ORDER_ALREADY_PROCESSED')
+          }
+
+          const keys = []
+          const generatedCodes = new Set()
+
+          for (const item of existingOrder.items) {
+            for (let copy = 0; copy < item.quantity; copy++) {
+              let code
+
+              do {
+                code = generateDemoKey()
+              } while (generatedCodes.has(code))
+
+              generatedCodes.add(code)
+              keys.push({
+                orderItemId: item.id,
+                code,
+              })
+            }
+          }
+
+          if (keys.length > 0) {
+            await tx.orderItemKey.createMany({
+              data: keys,
+            })
+          }
+
+          return tx.order.findUnique({
+            where: {
+              id: orderId,
+            },
+            include: {
+              items: {
+                include: {
+                  keys: true,
+                },
+              },
+            },
+          })
+        })
+        break
+      } catch (error) {
+        if (error.code !== 'P2002' || attempt === MAX_KEY_INSERT_ATTEMPTS - 1) {
+          throw error
         }
       }
-
-      if (keys.length > 0) {
-        await tx.orderItemKey.createMany({
-          data: keys,
-        })
-      }
-
-      return tx.order.findUnique({
-        where: {
-          id: orderId,
-        },
-        include: {
-          items: {
-            include: {
-              keys: true,
-            },
-          },
-        },
-      })
-    })
+    }
 
     res.json({
       message: 'Заказ успешно оплачен',
@@ -815,9 +908,9 @@ app.post('/orders/:id/pay', authMiddleware, async (req, res) => {
 // Получение заказов текущего пользователя
 app.get('/orders/my', authMiddleware, async (req, res) => {
   try {
-    const userId = Number(req.user.id)
+    const userId = req.user.id
 
-    if (!Number.isInteger(userId) || userId <= 0) {
+    if (!isPostgresInt(userId) || userId <= 0) {
       return res.status(401).json({
         message: 'Некорректные данные пользователя',
       })
@@ -884,9 +977,9 @@ app.get('/admin/orders', authMiddleware, adminMiddleware, async (req, res) => {
 // Отмена ожидающего заказа администратором
 app.patch('/admin/orders/:id/cancel', authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const orderId = Number(req.params.id)
+    const orderId = parsePostgresId(req.params.id)
 
-    if (!Number.isInteger(orderId) || orderId <= 0) {
+    if (orderId === null) {
       return res.status(400).json({
         message: 'Некорректный ID заказа',
       })
