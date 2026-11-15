@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AuthContext } from './auth.js'
 const TOKEN_KEY = 'lunaMarketToken'
 const USER_KEY = 'lunaMarketUser'
@@ -67,6 +67,24 @@ export function AuthProvider({ children }) {
     }
   }
 
+  const updateUser = useCallback((updates) => {
+    setAuth((currentAuth) => {
+      if (!currentAuth.user) return currentAuth
+
+      const user = { ...currentAuth.user, ...updates }
+      const persistentUser = { ...user }
+      delete persistentUser.avatar
+
+      try {
+        localStorage.setItem(USER_KEY, JSON.stringify(persistentUser))
+      } catch {
+        // Профиль остаётся обновлённым в памяти до следующего входа.
+      }
+
+      return { ...currentAuth, user }
+    })
+  }, [])
+
   return (
     <AuthContext.Provider
       value={{
@@ -75,6 +93,7 @@ export function AuthProvider({ children }) {
         isAuthenticated: Boolean(auth.token && auth.user),
         login,
         logout,
+        updateUser,
       }}
     >
       {children}

@@ -430,6 +430,173 @@ app.post('/auth/login', async (req, res) => {
   }
 })
 
+function formatUserProfile(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    name: user.name,
+    createdAt: user.createdAt,
+    avatar: user.avatarData && user.avatarMimeType
+      ? `data:${user.avatarMimeType};base64,${globalThis.Buffer.from(user.avatarData).toString('base64')}`
+      : null,
+  }
+}
+
+const profileSelection = {
+  id: true,
+  email: true,
+  role: true,
+  name: true,
+  createdAt: true,
+  avatarData: true,
+  avatarMimeType: true,
+}
+
+// Профиль текущего пользователя
+app.get('/profile', authMiddleware, async (req, res) => {
+  try {
+    if (!isPostgresInt(req.user.id) || req.user.id <= 0) {
+      return res.status(401).json({ message: 'Некорректные данные пользователя' })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: profileSelection,
+    })
+
+    if (!user) {
+      return res.status(404).json({ message: 'Пользователь не найден' })
+    }
+
+    res.json(formatUserProfile(user))
+  } catch (error) {
+    console.error('Ошибка получения профиля:', error)
+    res.status(500).json({ message: 'Не удалось получить профиль' })
+  }
+})
+
+// Изменение имени текущего пользователя
+app.patch('/profile', authMiddleware, async (req, res) => {
+  try {
+    if (!isPostgresInt(req.user.id) || req.user.id <= 0) {
+      return res.status(401).json({ message: 'Некорректные данные пользователя' })
+    }
+
+    if (!hasObjectBody(req.body) || Object.keys(req.body).some((key) => key !== 'name')) {
+      return res.status(400).json({ message: 'Можно изменить только имя пользователя' })
+    }
+
+    if (typeof req.body.name !== 'string' || req.body.name.trim().length > 40) {
+      return res.status(400).json({ message: 'Имя должно содержать не более 40 символов' })
+    }
+
+    const name = req.body.name.trim()
+
+    if (name && !/^[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}\s.'’-]{0,39}$/u.test(name)) {
+      return res.status(400).json({
+        message: 'Имя может содержать буквы, цифры, пробелы, дефис, точку и апостроф',
+      })
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { name: name || null },
+      select: profileSelection,
+    })
+
+    res.json(formatUserProfile(user))
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ message: 'Пользователь не найден' })
+    }
+
+    console.error('Ошибка изменения профиля:', error)
+    res.status(500).json({ message: 'Не удалось сохранить имя' })
+  }
+})
+
+// Загрузка или замена аватара текущего пользователя
+app.put(
+  '/profile/avatar',
+  authMiddleware,
+  express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '2mb' }),
+  async (req, res) => {
+    try {
+      if (!isPostgresInt(req.user.id) || req.user.id <= 0) {
+        return res.status(401).json({ message: 'Некорректные данные пользователя' })
+      }
+
+      const mimeType = String(req.headers['content-type'] || '')
+        .split(';')[0]
+        .trim()
+        .toLowerCase()
+      const bytes = req.body
+      const validImage = globalThis.Buffer.isBuffer(bytes) && (
+        (mimeType === 'image/jpeg' && bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) ||
+        (mimeType === 'image/png' && bytes.length >= 8 && bytes.subarray(0, 8).equals(globalThis.Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) ||
+        (mimeType === 'image/webp' && bytes.length >= 12 && bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP')
+      )
+
+      if (!validImage) {
+        return res.status(415).json({
+          message: 'Выберите изображение JPEG, PNG или WebP размером не более 2 МБ',
+        })
+      }
+
+      const user = await prisma.user.update({
+        where: { id: req.user.id },
+        data: { avatarData: bytes, avatarMimeType: mimeType },
+        select: profileSelection,
+      })
+
+      res.json(formatUserProfile(user))
+    } catch (error) {
+      if (error.code === 'P2025') {
+        return res.status(404).json({ message: 'Пользователь не найден' })
+      }
+
+      console.error('Ошибка загрузки аватара:', error)
+      res.status(500).json({ message: 'Не удалось сохранить аватар' })
+    }
+  },
+  (error, req, res, next) => {
+    if (error.type === 'entity.too.large') {
+      return res.status(413).json({ message: 'Размер аватара не должен превышать 2 МБ' })
+    }
+
+    if (error.type === 'encoding.unsupported') {
+      return res.status(415).json({ message: 'Неподдерживаемый формат изображения' })
+    }
+
+    next(error)
+  },
+)
+
+// Удаление аватара текущего пользователя
+app.delete('/profile/avatar', authMiddleware, async (req, res) => {
+  try {
+    if (!isPostgresInt(req.user.id) || req.user.id <= 0) {
+      return res.status(401).json({ message: 'Некорректные данные пользователя' })
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { avatarData: null, avatarMimeType: null },
+      select: profileSelection,
+    })
+
+    res.json(formatUserProfile(user))
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ message: 'Пользователь не найден' })
+    }
+
+    console.error('Ошибка удаления аватара:', error)
+    res.status(500).json({ message: 'Не удалось удалить аватар' })
+  }
+})
+
 // Получение всех игр
 app.get('/games', async (req, res) => {
   try {

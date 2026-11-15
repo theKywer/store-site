@@ -23,6 +23,8 @@ import RegisterPage from './pages/RegisterPage'
 import CheckoutPage from './pages/CheckoutPage'
 import MyOrdersPage from './pages/MyOrdersPage'
 import RequireAdmin from './components/RequireAdmin'
+import RequireAuth from './components/RequireAuth'
+import ProfilePage from './pages/ProfilePage'
 
 import ToastViewport from './components/ToastViewport'
 
@@ -354,6 +356,14 @@ function App() {
             }
           />
           <Route path="/orders/my" element={<MyOrdersPage />} />
+          <Route
+            path="/profile"
+            element={
+              <RequireAuth>
+                <ProfilePage />
+              </RequireAuth>
+            }
+          />
 
           <Route path="/about" element={<AboutPage />} />
           <Route path="/support" element={<SupportPage />} />

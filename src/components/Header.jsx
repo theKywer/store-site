@@ -1,11 +1,59 @@
 
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/auth.js'
+import { apiFetch } from '../api'
 
 /** Шапка сайта с навигацией и текущими счётчиками корзины и избранного. */
 function Header({ cartCount, favoriteCount }) {
-  const { isAuthenticated, user, logout } = useAuth()
+  const { isAuthenticated, user, token, logout, updateUser } = useAuth()
   const navigate = useNavigate()
+  const infoMenuRef = useRef(null)
+  const infoButtonRef = useRef(null)
+  const [isInfoOpen, setIsInfoOpen] = useState(false)
+
+  useEffect(() => {
+    if (!isAuthenticated || !token) {
+      updateUser({ avatar: null })
+      return undefined
+    }
+
+    const controller = new AbortController()
+    apiFetch('/api/profile', {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(data.message || 'Не удалось загрузить профиль')
+        updateUser({ name: data.name, avatar: data.avatar })
+      })
+      .catch(() => {})
+
+    return () => controller.abort()
+  }, [isAuthenticated, token, updateUser])
+
+  useEffect(() => {
+    if (!isInfoOpen) return undefined
+
+    function handlePointerDown(event) {
+      if (!infoMenuRef.current?.contains(event.target)) setIsInfoOpen(false)
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        setIsInfoOpen(false)
+        infoButtonRef.current?.focus()
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isInfoOpen])
 
   /** При повторном нажатии на логотип плавно прокручивает страницу вверх. */
   function handleLogoClick() {
@@ -18,6 +66,24 @@ function Header({ cartCount, favoriteCount }) {
   function handleLogout() {
     logout()
     navigate('/', { replace: true })
+  }
+
+  function handleInformationMenuKeyDown(event) {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+    const menuItems = infoMenuRef.current?.querySelectorAll('[role="menuitem"]')
+    if (!menuItems?.length) return
+
+    event.preventDefault()
+    const currentIndex = Array.from(menuItems).indexOf(document.activeElement)
+    if (event.key === 'Home') return menuItems[0].focus()
+    if (event.key === 'End') return menuItems[menuItems.length - 1].focus()
+
+    const nextIndex = currentIndex < 0
+      ? (event.key === 'ArrowDown' ? 0 : menuItems.length - 1)
+      : event.key === 'ArrowDown'
+        ? (currentIndex + 1) % menuItems.length
+        : (currentIndex - 1 + menuItems.length) % menuItems.length
+    menuItems[nextIndex].focus()
   }
 
   return (
@@ -36,10 +102,44 @@ function Header({ cartCount, favoriteCount }) {
         </span>
       </Link>
 
-      <nav className="navigation">
-        <Link to="/#discounts">Скидки</Link>
-        <Link to="/about">О нас</Link>
-        {isAuthenticated && <Link to="/orders/my">Мои заказы</Link>}
+      <nav className="navigation" aria-label="Основная навигация">
+        <div className={`information-menu${isInfoOpen ? ' is-open' : ''}`} ref={infoMenuRef}>
+          <button
+            ref={infoButtonRef}
+            type="button"
+            className="information-trigger"
+            aria-expanded={isInfoOpen}
+            aria-controls="header-information-links"
+            aria-haspopup="true"
+            onClick={() => setIsInfoOpen((open) => !open)}
+          >
+            Информация
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg>
+          </button>
+          <div
+            className="information-dropdown"
+            id="header-information-links"
+            role="menu"
+            onKeyDown={handleInformationMenuKeyDown}
+          >
+            <Link role="menuitem" to="/#catalog" onClick={() => setIsInfoOpen(false)}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12l2 4v12H4V8l2-4Z" /><path d="M4 9h16M9 13h6" /></svg>
+              Каталог
+            </Link>
+            <Link role="menuitem" to="/about" onClick={() => setIsInfoOpen(false)}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v5m0-8h.01" /></svg>
+              О нас
+            </Link>
+            <Link role="menuitem" to="/support" onClick={() => setIsInfoOpen(false)}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H9l-5 4V5Z" /><path d="M8 10h8m-8 4h5" /></svg>
+              Техподдержка
+            </Link>
+            <Link role="menuitem" to="/legal" onClick={() => setIsInfoOpen(false)}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6V3Z" /><path d="M14 3v5h5M9 13h7m-7 4h7" /></svg>
+              Правовая информация
+            </Link>
+          </div>
+        </div>
         {isAuthenticated && user.role === 'ADMIN' && (
           <Link to="/admin">Админ-панель</Link>
         )}
@@ -62,9 +162,22 @@ function Header({ cartCount, favoriteCount }) {
           {isAuthenticated ? (
             <>
               <span className="account-user">
-                <span className="account-email" title={user.email}>
-                  {user.email}
-                </span>
+                <Link
+                  to="/profile"
+                  className="header-profile-link"
+                  aria-label={`Профиль: ${user.name?.trim() || user.email.split('@')[0]}`}
+                >
+                  <span className="header-avatar-thumb">
+                    {user.avatar ? (
+                      <img src={user.avatar} alt="" />
+                    ) : (
+                      (user.name?.trim() || user.email.split('@')[0]).charAt(0).toLocaleUpperCase('ru-RU')
+                    )}
+                  </span>
+                  <span className="account-email" title={user.email}>
+                    {user.name?.trim() || user.email.split('@')[0]}
+                  </span>
+                </Link>
                 <span className="account-role">{user.role}</span>
               </span>
               <button
@@ -87,7 +200,7 @@ function Header({ cartCount, favoriteCount }) {
             </>
           )}
 
-          <button
+          {!isAuthenticated && <button
             type="button"
             className="account-icon-button"
             disabled
@@ -98,7 +211,7 @@ function Header({ cartCount, favoriteCount }) {
               <path d="M20 21a8 8 0 0 0-16 0" />
               <circle cx="12" cy="8" r="4" />
             </svg>
-          </button>
+          </button>}
         </div>
       </div>
     </header>
