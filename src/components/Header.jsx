@@ -27,8 +27,13 @@ function Header({ cartCount, favoriteCount }) {
         className="logo"
         onClick={handleLogoClick}
       >
-        <span className="logo-icon">L</span>
-        <span>LUNA MARKET</span>
+        <span className="logo-icon">
+          <span className="logo-icon-letter">L</span>
+        </span>
+        <span className="logo-wordmark">
+          LUNA MARKET
+          <span className="logo-pumpkin" aria-hidden="true">🎃</span>
+        </span>
       </Link>
 
       <nav className="navigation">

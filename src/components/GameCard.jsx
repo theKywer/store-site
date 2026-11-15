@@ -31,12 +31,6 @@ function GameCard({ game, onAddToCart, isFavorite, onToggleFavorite }) {
           </span>
         )}
 
-        {hasDiscount && (
-          <span className="game-card-discount">
-            -{game.discount}%
-          </span>
-        )}
-
         <span className="game-card-genre">
           {game.genre}
         </span>
@@ -66,9 +60,16 @@ function GameCard({ game, onAddToCart, isFavorite, onToggleFavorite }) {
               </span>
             )}
 
-            <strong>
-              {game.price.toLocaleString('ru-RU')} ₸
-            </strong>
+            <span className="game-card-current-price">
+              <strong>
+                {game.price.toLocaleString('ru-RU')} ₸
+              </strong>
+              {hasDiscount && (
+                <span className="sale-discount">
+                  <span aria-hidden="true">🎃</span> -{game.discount}%
+                </span>
+              )}
+            </span>
           </div>
 
           <button

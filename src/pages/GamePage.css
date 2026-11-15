@@ -126,18 +126,6 @@
   letter-spacing: 0.4px;
 }
 
-.game-page-discount {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  padding: 7px 10px;
-  border-radius: 6px;
-  background: #e879a9;
-  color: #171019;
-  font-size: 13px;
-  font-weight: 800;
-}
-
 .game-page-info {
   display: flex;
   flex-direction: column;

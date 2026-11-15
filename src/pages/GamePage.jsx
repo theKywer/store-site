@@ -289,11 +289,6 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
               </span>
             )}
 
-            {game.discount > 0 && (
-              <span className="game-page-discount">
-                -{game.discount}%
-              </span>
-            )}
           </div>
 
           {galleryMedia.length > 0 && (
@@ -413,9 +408,16 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
                   </span>
                 )}
 
-              <strong>
-                {game.price.toLocaleString('ru-RU')} ₸
-              </strong>
+              <span className="game-page-current-price">
+                <strong>
+                  {game.price.toLocaleString('ru-RU')} ₸
+                </strong>
+                {game.discount > 0 && game.oldPrice > game.price && (
+                  <span className="sale-discount">
+                    <span aria-hidden="true">🎃</span> -{game.discount}%
+                  </span>
+                )}
+              </span>
             </div>
 
             <button onClick={() => onAddToCart(game)}>

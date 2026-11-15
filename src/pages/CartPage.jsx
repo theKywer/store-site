@@ -91,11 +91,6 @@ function CartPage({
                 <div className="cart-item-image">
                   <img src={game.image} alt={game.title} />
 
-                  {hasDiscount && (
-                    <span className="cart-item-discount">
-                      -{game.discount}%
-                    </span>
-                  )}
                 </div>
 
                 <div className="cart-item-info">
@@ -115,6 +110,11 @@ function CartPage({
                     <strong>
                       {game.price.toLocaleString('ru-RU')} ₸
                     </strong>
+                    {hasDiscount && (
+                      <span className="sale-discount">
+                        <span aria-hidden="true">🎃</span> -{game.discount}%
+                      </span>
+                    )}
                   </div>
 
                   {hasDiscount && (
