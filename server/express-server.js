@@ -7,14 +7,70 @@ const jwt = require('jsonwebtoken')
 const express = require('express')
 const bcrypt = require('bcrypt')
 const prisma = require('./prisma')
+const { getEmailJsConfig, sendVerificationEmail } = require('./email/emailjsClient')
 
 const app = express()
+app.set('trust proxy', 1)
 const POSTGRES_INT_MAX = 2147483647
 const MAX_GALLERY_ITEMS = 20
 const MAX_MEDIA_SOURCE_LENGTH = 2048
 const MAX_MEDIA_ALT_LENGTH = 500
 const MAX_KEY_INSERT_ATTEMPTS = 3
 const DEMO_KEY_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+const EMAIL_CODE_TTL_MS = 10 * 60 * 1000
+const EMAIL_CODE_RESEND_MS = 60 * 1000
+const EMAIL_CODE_MAX_ATTEMPTS = 5
+
+function createRateLimiter({ maxRequests, windowMs, code, message }) {
+  const requestsByIp = new Map()
+  let requestsSinceCleanup = 0
+
+  return (req, res, next) => {
+    const now = Date.now()
+    const ip = req.ip || req.socket.remoteAddress || 'unknown'
+    const current = requestsByIp.get(ip)
+    const entry = !current || current.resetAt <= now
+      ? { count: 0, resetAt: now + windowMs }
+      : current
+
+    if (entry.count >= maxRequests) {
+      const retryAfterSeconds = Math.max(1, Math.ceil((entry.resetAt - now) / 1000))
+      res.set('Retry-After', String(retryAfterSeconds))
+      return res.status(429).json({ code, message, retryAfterSeconds })
+    }
+
+    entry.count += 1
+    requestsByIp.set(ip, entry)
+    requestsSinceCleanup += 1
+    if (requestsSinceCleanup >= 256) {
+      for (const [key, value] of requestsByIp) {
+        if (value.resetAt <= now) requestsByIp.delete(key)
+      }
+      requestsSinceCleanup = 0
+    }
+
+    next()
+  }
+}
+
+const limitRegistrationRequests = createRateLimiter({
+  maxRequests: 5,
+  windowMs: 15 * 60 * 1000,
+  code: 'REGISTRATION_RATE_LIMITED',
+  message: 'Слишком много попыток регистрации. Попробуйте позже.',
+})
+const limitVerificationRequests = createRateLimiter({
+  maxRequests: 15,
+  windowMs: 15 * 60 * 1000,
+  code: 'VERIFICATION_RATE_LIMITED',
+  message: 'Слишком много попыток подтверждения. Попробуйте позже.',
+})
+const limitResendRequests = createRateLimiter({
+  maxRequests: 8,
+  windowMs: 60 * 60 * 1000,
+  code: 'RESEND_RATE_LIMITED',
+  message: 'Слишком много запросов кода. Попробуйте позже.',
+})
 
 app.use(express.json({ limit: '100kb' }))
 
@@ -276,8 +332,28 @@ app.get('/contact', (req, res) => {
   res.send('Связаться с Luna Market можно через поддержку')
 })
 
-// Регистрация пользователя
-app.post('/auth/register', async (req, res) => {
+function generateEmailVerificationCode() {
+  return crypto.randomInt(0, 1_000_000).toString().padStart(6, '0')
+}
+
+function hashEmailVerificationCode(userId, code) {
+  const secret = process.env.JWT_SECRET
+  if (!secret) throw new Error('JWT_SECRET is not configured')
+
+  return crypto
+    .createHmac('sha256', secret)
+    .update(`${userId}:${code}`)
+    .digest('hex')
+}
+
+function matchesEmailVerificationCode(userId, code, expectedHash) {
+  const candidate = Buffer.from(hashEmailVerificationCode(userId, code), 'hex')
+  const expected = Buffer.from(expectedHash, 'hex')
+  return candidate.length === expected.length && crypto.timingSafeEqual(candidate, expected)
+}
+
+// Регистрация пользователя с обязательным подтверждением почты
+app.post('/auth/register', limitRegistrationRequests, async (req, res) => {
   try {
     if (!hasObjectBody(req.body)) {
       return res.status(400).json({
@@ -285,11 +361,13 @@ app.post('/auth/register', async (req, res) => {
       })
     }
 
-    const { email, password } = req.body
+    const { name, email, password } = req.body
 
     if (
+      typeof name !== 'string' ||
       typeof email !== 'string' ||
       typeof password !== 'string' ||
+      !name.trim() ||
       !email.trim() ||
       !password
     ) {
@@ -299,6 +377,16 @@ app.post('/auth/register', async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase()
+    const normalizedName = name.trim()
+
+    if (
+      normalizedName.length > 40 ||
+      !/^[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}\s.'’-]{0,39}$/u.test(normalizedName)
+    ) {
+      return res.status(400).json({
+        message: 'Имя должно содержать от 1 до 40 символов: буквы, цифры, пробелы, дефис, точку или апостроф',
+      })
+    }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       return res.status(400).json({
@@ -312,6 +400,15 @@ app.post('/auth/register', async (req, res) => {
       })
     }
 
+    try {
+      getEmailJsConfig()
+    } catch (error) {
+      return res.status(503).json({
+        code: error.code || 'EMAIL_SERVICE_NOT_CONFIGURED',
+        message: error.message,
+      })
+    }
+
     const existingUser = await prisma.user.findUnique({
       where: {
         email: normalizedEmail,
@@ -319,26 +416,66 @@ app.post('/auth/register', async (req, res) => {
     })
 
     if (existingUser) {
+      if (!existingUser.emailVerifiedAt) {
+        return res.status(409).json({
+          code: 'EMAIL_NOT_VERIFIED',
+          message: 'Для этого адреса ещё не завершено подтверждение почты.',
+          email: normalizedEmail,
+        })
+      }
+
       return res.status(409).json({
         message: 'Пользователь уже существует',
       })
     }
 
     const hashedPassword = await bcrypt.hash(password, 10)
+    const code = generateEmailVerificationCode()
+    const now = new Date()
+    const user = await prisma.$transaction(async (transaction) => {
+      const createdUser = await transaction.user.create({
+        data: {
+          name: normalizedName,
+          email: normalizedEmail,
+          password: hashedPassword,
+        },
+      })
 
-    const user = await prisma.user.create({
-      data: {
-        email: normalizedEmail,
-        password: hashedPassword,
-      },
+      await transaction.emailVerification.create({
+        data: {
+          userId: createdUser.id,
+          codeHash: hashEmailVerificationCode(createdUser.id, code),
+          expiresAt: new Date(now.getTime() + EMAIL_CODE_TTL_MS),
+          lastSentAt: now,
+        },
+      })
+
+      return createdUser
     })
 
+    try {
+      await sendVerificationEmail(normalizedEmail, code)
+    } catch (error) {
+      const isConfigurationError = error.code === 'EMAIL_SERVICE_NOT_CONFIGURED'
+      return res.status(isConfigurationError ? 503 : 502).json({
+        code: error.code || 'EMAIL_SEND_FAILED',
+        message: isConfigurationError
+          ? error.message
+          : 'Аккаунт создан, но письмо не отправилось. Перейдите к подтверждению почты и попробуйте запросить новый код позже.',
+        email: user.email,
+        resendAfterSeconds: 60,
+      })
+    }
+
     res.status(201).json({
-      message: 'Регистрация успешна',
+      message: 'Аккаунт создан. Код подтверждения отправлен на указанную почту.',
+      email: user.email,
+      resendAfterSeconds: 60,
       user: {
         id: user.id,
         email: user.email,
         role: user.role,
+        name: user.name,
       },
     })
   } catch (error) {
@@ -348,10 +485,10 @@ app.post('/auth/register', async (req, res) => {
       })
     }
 
-    console.error('Ошибка регистрации:', error)
+    console.error('Ошибка регистрации:', error.code || error.name || 'unknown')
 
     res.status(500).json({
-      message: 'Не удалось зарегистрировать пользователя',
+      message: 'Не удалось завершить регистрацию. Попробуйте позже.',
     })
   }
 })
@@ -401,6 +538,13 @@ app.post('/auth/login', async (req, res) => {
       })
     }
 
+    if (!user.emailVerifiedAt) {
+      return res.status(403).json({
+        code: 'EMAIL_NOT_VERIFIED',
+        message: 'Подтвердите адрес электронной почты, прежде чем войти.',
+      })
+    }
+
     const token = jwt.sign(
       {
         id: user.id,
@@ -427,6 +571,172 @@ app.post('/auth/login', async (req, res) => {
     res.status(500).json({
       message: 'Не удалось выполнить вход',
     })
+  }
+})
+
+// Подтверждение адреса одноразовым кодом
+app.post('/auth/verify-email', limitVerificationRequests, async (req, res) => {
+  try {
+    if (!hasObjectBody(req.body)) {
+      return res.status(400).json({ message: 'Тело запроса должно быть JSON-объектом' })
+    }
+
+    const { email, code } = req.body
+    if (typeof email !== 'string' || typeof code !== 'string' || !/^\d{6}$/.test(code)) {
+      return res.status(400).json({
+        code: 'INVALID_OR_EXPIRED_CODE',
+        message: 'Проверьте email и введите шестизначный код.',
+      })
+    }
+
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return res.status(400).json({
+        code: 'INVALID_OR_EXPIRED_CODE',
+        message: 'Код неверный, просрочен или больше недействителен.',
+      })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { id: true, emailVerifiedAt: true },
+    })
+
+    if (!user || user.emailVerifiedAt) {
+      return res.status(400).json({
+        code: 'INVALID_OR_EXPIRED_CODE',
+        message: 'Код неверный, просрочен или больше недействителен.',
+      })
+    }
+
+    const now = new Date()
+    const result = await prisma.$transaction(async (transaction) => {
+      const verification = await transaction.emailVerification.findUnique({
+        where: { userId: user.id },
+      })
+
+      if (
+        !verification ||
+        verification.expiresAt <= now ||
+        verification.attempts >= EMAIL_CODE_MAX_ATTEMPTS
+      ) {
+        return false
+      }
+
+      const matches = matchesEmailVerificationCode(user.id, code, verification.codeHash)
+      if (!matches) {
+        await transaction.emailVerification.updateMany({
+          where: {
+            id: verification.id,
+            attempts: { lt: EMAIL_CODE_MAX_ATTEMPTS },
+            expiresAt: { gt: now },
+          },
+          data: { attempts: { increment: 1 } },
+        })
+        return false
+      }
+
+      const deleted = await transaction.emailVerification.deleteMany({
+        where: {
+          id: verification.id,
+          codeHash: verification.codeHash,
+          attempts: { lt: EMAIL_CODE_MAX_ATTEMPTS },
+          expiresAt: { gt: now },
+        },
+      })
+      if (deleted.count !== 1) return false
+
+      const updated = await transaction.user.updateMany({
+        where: { id: user.id, emailVerifiedAt: null },
+        data: { emailVerifiedAt: now },
+      })
+
+      return updated.count === 1
+    })
+
+    if (!result) {
+      return res.status(400).json({
+        code: 'INVALID_OR_EXPIRED_CODE',
+        message: 'Код неверный, просрочен или больше недействителен. Запросите новый код, если срок истёк.',
+      })
+    }
+
+    res.json({
+      message: 'Почта подтверждена. Теперь вы можете войти в аккаунт.',
+      email: normalizedEmail,
+    })
+  } catch (error) {
+    console.error('Ошибка подтверждения почты:', error.code || error.name || 'unknown')
+    res.status(500).json({ message: 'Не удалось подтвердить почту. Попробуйте позже.' })
+  }
+})
+
+// Повторная отправка кода с нейтральным ответом, не раскрывающим наличие аккаунта
+app.post('/auth/resend-verification', limitResendRequests, async (req, res) => {
+  try {
+    if (!hasObjectBody(req.body) || typeof req.body.email !== 'string') {
+      return res.status(400).json({ message: 'Укажите корректный email' })
+    }
+
+    const normalizedEmail = req.body.email.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return res.status(400).json({ message: 'Укажите корректный email' })
+    }
+
+    try {
+      getEmailJsConfig()
+    } catch (error) {
+      return res.status(503).json({
+        code: error.code || 'EMAIL_SERVICE_NOT_CONFIGURED',
+        message: error.message,
+      })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { id: true, emailVerifiedAt: true },
+    })
+
+    const genericResponse = () => res.status(202).json({
+      message: 'Если этому адресу требуется подтверждение, проверьте почту и папку «Спам». Доставка зависит от доступности почтового сервиса; новый запрос доступен не чаще раза в минуту.',
+      resendAfterSeconds: 60,
+    })
+
+    if (!user || user.emailVerifiedAt) return genericResponse()
+
+    const existingVerification = await prisma.emailVerification.findUnique({
+      where: { userId: user.id },
+    })
+    if (!existingVerification) return genericResponse()
+
+    const now = new Date()
+    const code = generateEmailVerificationCode()
+    const updated = await prisma.emailVerification.updateMany({
+      where: {
+        id: existingVerification.id,
+        lastSentAt: { lte: new Date(now.getTime() - EMAIL_CODE_RESEND_MS) },
+      },
+      data: {
+        codeHash: hashEmailVerificationCode(user.id, code),
+        expiresAt: new Date(now.getTime() + EMAIL_CODE_TTL_MS),
+        attempts: 0,
+        lastSentAt: now,
+      },
+    })
+
+    if (updated.count !== 1) return genericResponse()
+
+    try {
+      await sendVerificationEmail(normalizedEmail, code)
+    } catch (error) {
+      console.error('Повторная отправка письма не удалась:', error.code || error.name || 'unknown')
+      return genericResponse()
+    }
+
+    return genericResponse()
+  } catch (error) {
+    console.error('Ошибка повторной отправки кода:', error.code || error.name || 'unknown')
+    res.status(500).json({ message: 'Не удалось запросить новый код. Попробуйте позже.' })
   }
 })
 
@@ -1127,6 +1437,64 @@ app.get('/orders/my', authMiddleware, async (req, res) => {
 })
 
 // Получение всех заказов для администратора
+app.get('/admin/users', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        emailVerifiedAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    res.json(users)
+  } catch (error) {
+    console.error('Ошибка получения пользователей администратора:', error)
+    res.status(500).json({ message: 'Не удалось получить список пользователей' })
+  }
+})
+
+// Назначение или снятие роли администратора
+app.patch('/admin/users/:id/role', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const userId = parsePostgresId(req.params.id)
+    const { role } = req.body || {}
+
+    if (userId === null || !['USER', 'ADMIN'].includes(role)) {
+      return res.status(400).json({ message: 'Некорректные данные пользователя или роли' })
+    }
+
+    if (userId === req.user.id && role !== 'ADMIN') {
+      return res.status(409).json({ message: 'Нельзя снять роль администратора с самого себя' })
+    }
+
+    const target = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true } })
+    if (!target) return res.status(404).json({ message: 'Пользователь не найден' })
+
+    if (target.role === 'ADMIN' && role === 'USER') {
+      const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } })
+      if (adminCount <= 1) {
+        return res.status(409).json({ message: 'Нельзя снять роль у последнего администратора' })
+      }
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { role },
+      select: { id: true, email: true, name: true, role: true, createdAt: true, emailVerifiedAt: true },
+    })
+    res.json(user)
+  } catch (error) {
+    if (error.code === 'P2025') return res.status(404).json({ message: 'Пользователь не найден' })
+    console.error('Ошибка изменения роли пользователя:', error)
+    res.status(500).json({ message: 'Не удалось изменить роль пользователя' })
+  }
+})
+
 app.get('/admin/orders', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const orders = await prisma.order.findMany({

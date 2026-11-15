@@ -106,7 +106,7 @@ function prepareGameData(form) {
 }
 
 function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
-  const { token, logout } = useAuth()
+  const { token, user: currentUser, logout } = useAuth()
   const navigate = useNavigate()
 
   const [gameForm, setGameForm] = useState(emptyGameForm)
@@ -124,6 +124,66 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
   const [areOrdersLoading, setAreOrdersLoading] = useState(true)
   const [ordersError, setOrdersError] = useState(null)
   const [cancellingOrderId, setCancellingOrderId] = useState(null)
+
+  const [users, setUsers] = useState([])
+  const [areUsersLoading, setAreUsersLoading] = useState(true)
+  const [usersError, setUsersError] = useState(null)
+  const [updatingUserId, setUpdatingUserId] = useState(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    async function loadUsers() {
+      try {
+        const response = await apiFetch('/api/admin/users', {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        })
+        const data = await readAdminResponse(response, 'Не удалось загрузить пользователей')
+        setUsers(data)
+      } catch (requestError) {
+        if (requestError.name !== 'AbortError') {
+          if (requestError.status === 401) {
+            logout()
+            navigate('/login', { replace: true, state: { message: requestError.message } })
+          } else {
+            setUsersError(requestError.message)
+          }
+        }
+      } finally {
+        if (!controller.signal.aborted) setAreUsersLoading(false)
+      }
+    }
+
+    loadUsers()
+    return () => controller.abort()
+  }, [token, logout, navigate])
+
+  async function changeUserRole(targetUser, role) {
+    setUpdatingUserId(targetUser.id)
+    setUsersError(null)
+    try {
+      const response = await apiFetch(`/api/admin/users/${targetUser.id}/role`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ role }),
+      })
+      const updatedUser = await readAdminResponse(response, 'Не удалось изменить роль пользователя')
+      setUsers((current) => current.map((item) => item.id === updatedUser.id ? updatedUser : item))
+    } catch (requestError) {
+      if (requestError.status === 401) {
+        logout()
+        navigate('/login', { replace: true, state: { message: requestError.message } })
+      } else {
+        setUsersError(requestError.message)
+      }
+    } finally {
+      setUpdatingUserId(null)
+    }
+  }
 
   useEffect(() => {
     const controller = new AbortController()
@@ -779,6 +839,56 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
               )}
             </AdminDisclosure>
           ))}
+      </AdminDisclosure>
+
+      <AdminDisclosure
+        className="admin-users admin-panel"
+        eyebrow="УПРАВЛЕНИЕ ДОСТУПОМ"
+        title={`Пользователи (${users.length})`}
+        meta="Выдача и снятие прав администратора"
+      >
+        {areUsersLoading && <p className="admin-feedback is-loading">Загрузка пользователей…</p>}
+        {usersError && <p className="admin-feedback is-error">{usersError}</p>}
+        {!areUsersLoading && !usersError && users.length === 0 && (
+          <p className="admin-feedback">Зарегистрированных пользователей пока нет.</p>
+        )}
+        {!areUsersLoading && users.map((listedUser) => (
+          <article className="admin-user-item" key={listedUser.id}>
+            <div className="admin-user-info">
+              <strong>{listedUser.name || listedUser.email.split('@')[0]}</strong>
+              <span>{listedUser.email}</span>
+              <small>
+                ID {listedUser.id} · Регистрация {new Date(listedUser.createdAt).toLocaleDateString('ru-RU')}
+                {listedUser.emailVerifiedAt ? ' · Email подтверждён' : ' · Email не подтверждён'}
+              </small>
+            </div>
+            <div className="admin-user-role-actions">
+              <span className={`admin-user-role${listedUser.role === 'ADMIN' ? ' is-admin' : ''}`}>
+                {listedUser.role === 'ADMIN' ? 'Администратор' : 'Пользователь'}
+              </span>
+              {listedUser.role === 'ADMIN' ? (
+                <button
+                  type="button"
+                  className="admin-user-role-button"
+                  onClick={() => changeUserRole(listedUser, 'USER')}
+                  disabled={updatingUserId !== null || listedUser.id === currentUser?.id}
+                  title={listedUser.id === currentUser?.id ? 'Нельзя снять роль с самого себя' : undefined}
+                >
+                  {updatingUserId === listedUser.id ? 'Сохраняем…' : 'Снять админку'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="admin-user-role-button is-promote"
+                  onClick={() => changeUserRole(listedUser, 'ADMIN')}
+                  disabled={updatingUserId !== null}
+                >
+                  {updatingUserId === listedUser.id ? 'Сохраняем…' : 'Выдать админку'}
+                </button>
+              )}
+            </div>
+          </article>
+        ))}
       </AdminDisclosure>
 
       <AdminDisclosure

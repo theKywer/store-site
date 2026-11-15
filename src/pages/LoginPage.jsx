@@ -11,12 +11,14 @@ function LoginPage() {
   const location = useLocation()
   const [error, setError] = useState(location.state?.message || '')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [verificationEmail, setVerificationEmail] = useState('')
   const navigate = useNavigate()
   const { login } = useAuth()
 
   async function handleSubmit(event) {
     event.preventDefault()
     setError('')
+    setVerificationEmail('')
 
     if (!email.trim() || !password) {
       setError('Заполни email и пароль.')
@@ -34,6 +36,12 @@ function LoginPage() {
       const data = await response.json().catch(() => ({}))
 
       if (!response.ok) {
+        if (response.status === 403 && data.code === 'EMAIL_NOT_VERIFIED') {
+          setVerificationEmail(email.trim())
+          setError(data.message || 'Подтвердите почту перед входом.')
+          return
+        }
+
         throw new Error(data.message || 'Не удалось выполнить вход.')
       }
 
@@ -75,6 +83,15 @@ function LoginPage() {
           />
 
           {error && <p className="auth-error" role="alert">{error}</p>}
+          {verificationEmail && (
+            <Link
+              className="auth-verify-link"
+              to="/verify-email"
+              state={{ email: verificationEmail }}
+            >
+              Перейти к подтверждению почты
+            </Link>
+          )}
 
           <button type="submit" className="primary-button" disabled={isSubmitting}>
             {isSubmitting ? 'Входим...' : 'Войти'}

@@ -296,6 +296,88 @@
   color: #d0c0ff;
 }
 
+.admin-users > .admin-disclosure-content > .admin-disclosure-inner > .admin-disclosure-fieldset {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-user-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 15px 17px;
+  border: 1px solid #342f3e;
+  border-radius: 10px;
+  background: rgba(15, 13, 19, 0.45);
+}
+
+.admin-user-info {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.admin-user-info strong {
+  color: #f1edf7;
+  font-size: 15px;
+}
+
+.admin-user-info > span,
+.admin-user-info small {
+  color: #aaa3b4;
+  overflow-wrap: anywhere;
+}
+
+.admin-user-info small {
+  font-size: 12px;
+}
+
+.admin-user-role-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.admin-user-role {
+  color: #c9c3d2;
+  font-size: 13px;
+}
+
+.admin-user-role.is-admin {
+  color: #d3b9ff;
+}
+
+.admin-user-role-button {
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid rgba(229, 112, 145, 0.35);
+  border-radius: 8px;
+  background: rgba(229, 112, 145, 0.1);
+  color: #f0a7bd;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.admin-user-role-button.is-promote {
+  border-color: rgba(157, 117, 230, 0.45);
+  background: rgba(139, 92, 246, 0.15);
+  color: #d8c6ff;
+}
+
+.admin-user-role-button:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+
+.admin-user-role-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .admin-orders-heading {
   display: flex;
   align-items: center;
@@ -508,6 +590,17 @@
   .admin-panel {
     margin-top: 16px;
     padding: 20px 17px;
+  }
+
+  .admin-user-item {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .admin-user-role-actions {
+    flex-wrap: wrap;
+    justify-content: space-between;
   }
 
   .admin-game-form,

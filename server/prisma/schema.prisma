@@ -47,16 +47,30 @@ model GameMedia {
 }
 
 model User {
-  id         Int      @id @default(autoincrement())
-  email      String   @unique
-  password   String
-  role       String   @default("USER")
-  createdAt  DateTime @default(now())
-  name       String?
-  avatarData Bytes?
-  avatarMimeType String?
+  id              Int      @id @default(autoincrement())
+  email           String   @unique
+  password        String
+  role            String   @default("USER")
+  createdAt       DateTime @default(now())
+  name            String?
+  avatarData      Bytes?
+  avatarMimeType  String?
+  emailVerifiedAt DateTime?
 
-  orders     Order[]
+  orders            Order[]
+  emailVerification EmailVerification?
+}
+
+model EmailVerification {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @unique
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int      @default(0)
+  lastSentAt DateTime
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Order {

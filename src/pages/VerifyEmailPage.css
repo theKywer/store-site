@@ -1,0 +1,142 @@
+.verify-email-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.verify-email-card::before {
+  position: absolute;
+  top: -120px;
+  right: -90px;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.18), transparent 70%);
+  content: '';
+  pointer-events: none;
+}
+
+.verify-email-icon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  margin-top: 20px;
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  border-radius: 15px;
+  background: rgba(139, 92, 246, 0.13);
+  color: #c4b5fd;
+}
+
+.verify-email-icon svg {
+  width: 25px;
+  height: 25px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
+
+.verify-email-card h1 {
+  margin-top: 17px;
+}
+
+.verify-email-form {
+  position: relative;
+  gap: 9px;
+  margin-top: 22px;
+}
+
+.verify-email-form label:not(:first-child) {
+  margin-top: 9px;
+}
+
+.verify-email-form input {
+  margin-bottom: 2px;
+}
+
+.verification-code-input {
+  min-height: 62px;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 27px !important;
+  font-weight: 700;
+  letter-spacing: 0.5em;
+  text-align: center;
+  text-indent: 0.5em;
+}
+
+.verification-code-hint {
+  color: #8f8999;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.verify-email-form .primary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.verify-email-form .primary-button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.auth-success-message {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(91, 166, 119, 0.35);
+  border-radius: 8px;
+  background: rgba(74, 145, 98, 0.1);
+  color: #a8ddb6;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.verify-resend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 21px;
+  color: #958e9f;
+  font-size: 12px;
+}
+
+.verify-resend-row button {
+  flex: 0 0 auto;
+  padding: 5px 0;
+  border: 0;
+  background: transparent;
+  color: #c4b5fd;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.verify-resend-row button:hover:not(:disabled) {
+  color: #e0d2ff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.verify-resend-row button:disabled {
+  color: #706a79;
+  cursor: wait;
+}
+
+.verify-email-card .auth-switch {
+  margin-top: 18px;
+}
+
+@media (max-width: 520px) {
+  .verify-email-card {
+    padding: 28px 20px;
+  }
+
+  .verify-resend-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+}

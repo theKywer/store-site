@@ -20,6 +20,7 @@ import NotFoundPage from './pages/NotFoundPage'
 import AdminPage from './pages/AdminPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import VerifyEmailPage from './pages/VerifyEmailPage'
 import CheckoutPage from './pages/CheckoutPage'
 import MyOrdersPage from './pages/MyOrdersPage'
 import RequireAdmin from './components/RequireAdmin'
@@ -375,6 +376,7 @@ function App() {
           <Route path="/legal" element={<LegalPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
 
           <Route
             path="/game/:id"

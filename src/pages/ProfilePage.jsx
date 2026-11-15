@@ -216,21 +216,21 @@ function ProfilePage() {
                 {displayName.charAt(0).toLocaleUpperCase('ru-RU')}
               </div>
             )}
+            <label className="profile-avatar-camera" title="Изменить аватар" aria-disabled={isSavingAvatar || isRemovingAvatar}>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleAvatarSelection}
+                disabled={isSavingAvatar || isRemovingAvatar}
+              />
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3v12H4V7Z" /><circle cx="12" cy="13" r="3.5" /></svg>
+              <span className="profile-sr-only">Изменить фотографию профиля</span>
+            </label>
             <span className="profile-avatar-status" aria-hidden="true" />
           </div>
           <h2>{displayName}</h2>
           <p>Участник Luna Market</p>
 
-          <label className="profile-avatar-camera" title="Изменить аватар" aria-disabled={isSavingAvatar || isRemovingAvatar}>
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleAvatarSelection}
-              disabled={isSavingAvatar || isRemovingAvatar}
-            />
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3v12H4V7Z" /><circle cx="12" cy="13" r="3.5" /></svg>
-            <span className="profile-sr-only">Изменить фотографию профиля</span>
-          </label>
           <span className="profile-help">Нажми на камеру, чтобы {profile.avatar || previewUrl ? 'заменить' : 'загрузить'} фото</span>
           <span className="profile-help">JPEG, PNG или WebP · до 2 МБ</span>
 
