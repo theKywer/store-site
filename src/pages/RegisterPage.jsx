@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import './AuthPage.css'
+import { apiFetch } from '../api'
 
 /** Страница регистрации с проверкой email, длины и совпадения паролей. */
 function RegisterPage() {
@@ -33,7 +34,7 @@ function RegisterPage() {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await apiFetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),

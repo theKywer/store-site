@@ -2,6 +2,7 @@
 import { useEffect, useId, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/auth.js'
+import { apiFetch } from '../api'
 import './AdminPage.css'
 
 const emptyGameForm = {
@@ -129,7 +130,7 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
 
     async function loadOrders() {
       try {
-        const response = await fetch('/api/admin/orders', {
+      const response = await apiFetch('/api/admin/orders', {
           headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         })
@@ -225,7 +226,7 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
     setAddGameError(null)
 
     try {
-      const response = await fetch('/api/games', {
+      const response = await apiFetch('/api/games', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -297,7 +298,7 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
     setEditGameError(null)
 
     try {
-      const response = await fetch(`/api/games/${editingGameId}`, {
+      const response = await apiFetch(`/api/games/${editingGameId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -339,7 +340,7 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
     setDeleteGameError(null)
 
     try {
-      const response = await fetch(`/api/games/${gameId}`, {
+      const response = await apiFetch(`/api/games/${gameId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -367,7 +368,7 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
     setOrdersError(null)
 
     try {
-      const response = await fetch(`/api/admin/orders/${orderId}/cancel`, {
+      const response = await apiFetch(`/api/admin/orders/${orderId}/cancel`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       })

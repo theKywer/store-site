@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/auth.js'
 import './AuthPage.css'
+import { apiFetch } from '../api'
 
 /** Страница входа: отправляет данные API и сохраняет JWT в общем auth-контексте. */
 function LoginPage() {
@@ -25,7 +26,7 @@ function LoginPage() {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await apiFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),

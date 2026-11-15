@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/auth.js'
 import './OrdersPage.css'
+import { apiFetch } from '../api'
 
 async function readResponse(response, fallback) {
   const data = await response.json().catch(() => ({}))
@@ -37,7 +38,7 @@ function CheckoutPage({ cartItems, onOrderPaid }) {
       setError('')
 
       try {
-        const response = await fetch('/api/orders/my', {
+        const response = await apiFetch('/api/orders/my', {
           headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         })
@@ -80,7 +81,7 @@ function CheckoutPage({ cartItems, onOrderPaid }) {
     setError('')
 
     try {
-      const response = await fetch('/api/orders', {
+      const response = await apiFetch('/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,7 +118,7 @@ function CheckoutPage({ cartItems, onOrderPaid }) {
     setError('')
 
     try {
-      const response = await fetch(`/api/orders/${order.id}/pay`, {
+      const response = await apiFetch(`/api/orders/${order.id}/pay`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       })

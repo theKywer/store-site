@@ -1,5 +1,6 @@
 
 import './App.css'
+import { apiFetch } from './api'
 
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
@@ -40,7 +41,7 @@ function App() {
   useEffect(() => {
     async function getGames() {
       try {
-        const response = await fetch('/api/games')
+        const response = await apiFetch('/api/games')
 
         if (!response.ok) {
           throw new Error('Не удалось загрузить игры')

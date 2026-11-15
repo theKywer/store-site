@@ -18,6 +18,23 @@ const DEMO_KEY_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 
 app.use(express.json({ limit: '100kb' }))
 
+app.use((req, res, next) => {
+  const allowedOrigin = process.env.CORS_ORIGIN
+
+  if (allowedOrigin && req.headers.origin === allowedOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin)
+    res.setHeader('Vary', 'Origin')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+  }
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204)
+  }
+
+  next()
+})
+
 app.use((error, req, res, next) => {
   if (error.type === 'entity.parse.failed') {
     return res.status(400).json({
@@ -1048,6 +1065,8 @@ app.patch('/admin/orders/:id/cancel', authMiddleware, adminMiddleware, async (re
 })
 
 // Запуск сервера
-app.listen(3001, () => {
-  console.log('Express запущен: http://localhost:3001')
+const port = process.env.PORT || 3001
+
+app.listen(port, () => {
+  console.log(`Express запущен: http://localhost:${port}`)
 })

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/auth.js'
 import './OrdersPage.css'
+import { apiFetch } from '../api'
 
 const statusLabels = {
   PENDING: 'Ожидает оплаты',
@@ -25,7 +26,7 @@ function MyOrdersPage() {
 
     async function loadOrders() {
       try {
-        const response = await fetch('/api/orders/my', {
+        const response = await apiFetch('/api/orders/my', {
           headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         })
