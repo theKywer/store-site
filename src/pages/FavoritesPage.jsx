@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import GameCard from '../components/GameCard'
 
 /** Показывает сохранённые игры или подсказку, если список пуст. */
-function FavoritesPage({ games, favoriteIds, onToggleFavorite, onAddToCart }) {
+function FavoritesPage({ games, favoriteIds, isLoading, error, onToggleFavorite, onAddToCart }) {
   // Оставляет в списке каталога только игры, выбранные пользователем.
   const favoriteGames = games.filter((game) => favoriteIds.includes(game.id))
 
@@ -14,7 +14,18 @@ function FavoritesPage({ games, favoriteIds, onToggleFavorite, onAddToCart }) {
         Игры, которые ты сохранил на потом.
       </p>
 
-      {favoriteGames.length > 0 ? (
+      {isLoading ? (
+        <div className="empty-favorites catalog-state" role="status">
+          <span className="ui-spinner" aria-hidden="true" />
+          Загружаем избранное…
+        </div>
+      ) : error ? (
+        <div className="empty-favorites catalog-state is-error" role="alert">
+          <h2>Избранное временно недоступно</h2>
+          <p>{error}</p>
+          <Link to="/#catalog" className="primary-button">Перейти в каталог</Link>
+        </div>
+      ) : favoriteGames.length > 0 ? (
         <div className="games-grid">
           {favoriteGames.map((game) => (
             <GameCard

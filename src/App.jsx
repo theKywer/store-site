@@ -315,6 +315,8 @@ function App() {
             element={
               <Home
                 games={games}
+                isLoading={isLoading}
+                error={error}
                 onAddToCart={addToCart}
                 favoriteIds={favoriteIds}
                 onToggleFavorite={toggleFavorite}
@@ -327,6 +329,8 @@ function App() {
             element={
               <FavoritesPage
                 games={games}
+              isLoading={isLoading}
+              error={error}
                 favoriteIds={favoriteIds}
                 onToggleFavorite={toggleFavorite}
                 onAddToCart={addToCart}
@@ -339,6 +343,7 @@ function App() {
             element={
               <CartPage
                 cartItems={cartItems}
+                isLoading={isLoading}
                 onIncrease={increaseQuantity}
                 onDecrease={decreaseQuantity}
                 onRemove={removeFromCart}

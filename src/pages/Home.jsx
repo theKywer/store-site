@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import GameCard from '../components/GameCard'
 
 /** Главная страница: поиск, фильтры, сортировка и каталог игр. */
-function Home({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
+function Home({ games, isLoading, error, onAddToCart, favoriteIds, onToggleFavorite }) {
   const [search, setSearch] = useState('')
   const [selectedGenre, setSelectedGenre] = useState('Все жанры')
   const [selectedAge, setSelectedAge] = useState('Любой возраст')
@@ -150,10 +150,23 @@ function Home({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
         </div>
 
         <div className="catalog-results">
-          Найдено игр: {filteredGames.length}
+          {isLoading ? 'Загружаем каталог…' : error ? 'Каталог временно недоступен' : `Найдено игр: ${filteredGames.length}`}
         </div>
 
-        {filteredGames.length > 0 ? (
+        {isLoading ? (
+          <div className="catalog-state" role="status">
+            <span className="ui-spinner" aria-hidden="true" />
+            Загружаем игры…
+          </div>
+        ) : error ? (
+          <div className="catalog-state is-error" role="alert">
+            <h3>Не удалось загрузить каталог</h3>
+            <p>{error}</p>
+            <button type="button" className="catalog-state-link" onClick={() => window.location.reload()}>
+              Попробовать снова
+            </button>
+          </div>
+        ) : filteredGames.length > 0 ? (
           <div className="games-grid">
             {filteredGames.map((game) => (
               <GameCard

@@ -83,7 +83,7 @@ function MyOrdersPage() {
         <p>Ваши покупки и выданные демонстрационные ключи.</p>
       </header>
 
-      {isLoading && <div className="orders-state">Загружаем историю заказов…</div>}
+      {isLoading && <div className="orders-state orders-loading" role="status"><span className="ui-spinner" aria-hidden="true" />Загружаем историю заказов…</div>}
       {error && <div className="orders-state is-error" role="alert">{error}</div>}
 
       {!isLoading && !error && orders.length === 0 && (

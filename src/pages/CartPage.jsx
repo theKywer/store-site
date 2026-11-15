@@ -15,6 +15,7 @@ function getItemCountLabel(count) {
 /** Отображает позиции корзины, управление количеством и расчёт стоимости. */
 function CartPage({
   cartItems,
+  isLoading,
   onIncrease,
   onDecrease,
   onRemove,
@@ -41,6 +42,20 @@ function CartPage({
   const totalSavings = totalOldPrice - totalPrice
   // Считает число единиц товара, а не число разных позиций.
   const itemCount = cartItems.reduce((total, item) => total + item.quantity, 0)
+
+  if (isLoading) {
+    return (
+      <section className="cart-section">
+        <div className="cart-heading">
+          <div><span className="section-label">ВАШ ЗАКАЗ</span><h1>Корзина</h1></div>
+        </div>
+        <div className="empty-cart cart-loading" role="status">
+          <span className="ui-spinner" aria-hidden="true" />
+          Загружаем корзину…
+        </div>
+      </section>
+    )
+  }
 
   if (cartItems.length === 0) {
     return (

@@ -21,6 +21,7 @@ function ProfilePage() {
   const [draftName, setDraftName] = useState('')
   const [selectedAvatar, setSelectedAvatar] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
+  const [isEditingName, setIsEditingName] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSavingName, setIsSavingName] = useState(false)
   const [isSavingAvatar, setIsSavingAvatar] = useState(false)
@@ -42,6 +43,7 @@ function ProfilePage() {
         const data = await readResponse(response)
         setProfile(data)
         setDraftName(data.name || data.email.split('@')[0])
+        setIsEditingName(false)
         updateUser({ name: data.name, avatar: data.avatar })
       } catch (requestError) {
         if (!controller.signal.aborted) {
@@ -109,6 +111,7 @@ function ProfilePage() {
       const data = await readResponse(response)
       setProfile(data)
       setDraftName(data.name || data.email.split('@')[0])
+      setIsEditingName(false)
       updateUser({ name: data.name, avatar: data.avatar })
       setNotice('Имя профиля сохранено.')
     } catch (requestError) {
@@ -173,7 +176,7 @@ function ProfilePage() {
   }
 
   if (isLoading) {
-    return <section className="profile-page"><p className="profile-state">Загружаем профиль…</p></section>
+    return <section className="profile-page"><p className="profile-state"><span className="ui-spinner" aria-hidden="true" />Загружаем профиль…</p></section>
   }
 
   if (!profile) {
@@ -218,29 +221,32 @@ function ProfilePage() {
           <h2>{displayName}</h2>
           <p>Участник Luna Market</p>
 
-          <label className="profile-button profile-button-secondary profile-file-button">
+          <label className="profile-avatar-camera" title="Изменить аватар" aria-disabled={isSavingAvatar || isRemovingAvatar}>
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
               onChange={handleAvatarSelection}
+              disabled={isSavingAvatar || isRemovingAvatar}
             />
-            {profile.avatar || previewUrl ? 'Выбрать другое фото' : 'Загрузить фото'}
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3v12H4V7Z" /><circle cx="12" cy="13" r="3.5" /></svg>
+            <span className="profile-sr-only">Изменить фотографию профиля</span>
           </label>
+          <span className="profile-help">Нажми на камеру, чтобы {profile.avatar || previewUrl ? 'заменить' : 'загрузить'} фото</span>
           <span className="profile-help">JPEG, PNG или WebP · до 2 МБ</span>
 
           {selectedAvatar && (
             <div className="profile-avatar-actions">
-              <button type="button" className="profile-button profile-button-primary" onClick={handleAvatarSave} disabled={isSavingAvatar}>
-                {isSavingAvatar ? 'Сохраняем…' : 'Сохранить фото'}
+              <button type="button" className="profile-button profile-button-primary" onClick={handleAvatarSave} disabled={isSavingAvatar || isRemovingAvatar}>
+                {isSavingAvatar ? <><span className="ui-spinner" aria-hidden="true" /> Сохраняем…</> : 'Сохранить фото'}
               </button>
-              <button type="button" className="profile-text-button" onClick={() => { setSelectedAvatar(null); setPreviewUrl(null) }}>
+              <button type="button" className="profile-text-button" onClick={() => { setSelectedAvatar(null); setPreviewUrl(null) }} disabled={isSavingAvatar}>
                 Отменить
               </button>
             </div>
           )}
           {!selectedAvatar && profile.avatar && (
             <button type="button" className="profile-text-button profile-remove-avatar" onClick={handleAvatarRemove} disabled={isRemovingAvatar}>
-              {isRemovingAvatar ? 'Удаляем…' : 'Удалить фото'}
+              {isRemovingAvatar ? <><span className="ui-spinner" aria-hidden="true" /> Удаляем…</> : 'Удалить фото'}
             </button>
           )}
         </section>
@@ -256,21 +262,46 @@ function ProfilePage() {
 
           <form className="profile-form" onSubmit={handleNameSave}>
             <label htmlFor="profile-name">Имя пользователя</label>
-            <div className="profile-name-row">
-              <input
-                id="profile-name"
-                type="text"
-                value={draftName}
-                onChange={(event) => setDraftName(event.target.value)}
-                maxLength={40}
-                autoComplete="name"
-                aria-describedby="profile-name-help"
-              />
-              <button type="submit" className="profile-button profile-button-primary" disabled={isSavingName}>
-                {isSavingName ? 'Сохраняем…' : 'Сохранить'}
-              </button>
-            </div>
-            <span id="profile-name-help" className="profile-help">Если оставить поле пустым, будет показана часть email.</span>
+            {isEditingName ? (
+              <>
+                <div className="profile-name-row">
+                  <input
+                    id="profile-name"
+                    type="text"
+                    value={draftName}
+                    onChange={(event) => setDraftName(event.target.value)}
+                    maxLength={40}
+                    autoComplete="name"
+                    aria-describedby="profile-name-help"
+                    autoFocus
+                  />
+                  <button type="submit" className="profile-button profile-button-primary" disabled={isSavingName}>
+                    {isSavingName ? <><span className="ui-spinner" aria-hidden="true" /> Сохраняем…</> : 'Сохранить'}
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-button profile-button-secondary"
+                    onClick={() => {
+                      setDraftName(profile.name || profile.email.split('@')[0])
+                      setIsEditingName(false)
+                      setError('')
+                    }}
+                    disabled={isSavingName}
+                  >
+                    Отмена
+                  </button>
+                </div>
+                <span id="profile-name-help" className="profile-help">Оставь поле пустым, чтобы снова показывалась часть email.</span>
+              </>
+            ) : (
+              <div className="profile-name-display">
+                <strong>{displayName}</strong>
+                <button type="button" className="profile-edit-button" onClick={() => setIsEditingName(true)}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5 5 5M4 20l4-.8L19 8a2.1 2.1 0 0 0-3-3L5 16l-1 4Z" /></svg>
+                  Изменить
+                </button>
+              </div>
+            )}
           </form>
 
           <div className="profile-data-grid">

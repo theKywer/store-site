@@ -1,6 +1,6 @@
 
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/auth.js'
 import { apiFetch } from '../api'
 
@@ -8,9 +8,11 @@ import { apiFetch } from '../api'
 function Header({ cartCount, favoriteCount }) {
   const { isAuthenticated, user, token, logout, updateUser } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const infoMenuRef = useRef(null)
   const infoButtonRef = useRef(null)
   const [isInfoOpen, setIsInfoOpen] = useState(false)
+  const isInformationPage = ['/about', '/support', '/legal'].includes(location.pathname)
 
   useEffect(() => {
     if (!isAuthenticated || !token) {
@@ -107,7 +109,7 @@ function Header({ cartCount, favoriteCount }) {
           <button
             ref={infoButtonRef}
             type="button"
-            className="information-trigger"
+            className={`information-trigger${isInformationPage ? ' is-current' : ''}`}
             aria-expanded={isInfoOpen}
             aria-controls="header-information-links"
             aria-haspopup="true"
@@ -122,26 +124,33 @@ function Header({ cartCount, favoriteCount }) {
             role="menu"
             onKeyDown={handleInformationMenuKeyDown}
           >
-            <Link role="menuitem" to="/#catalog" onClick={() => setIsInfoOpen(false)}>
+            <Link
+              role="menuitem"
+              to="/#catalog"
+              aria-current={location.pathname === '/' && location.hash === '#catalog' ? 'page' : undefined}
+              onClick={() => setIsInfoOpen(false)}
+            >
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12l2 4v12H4V8l2-4Z" /><path d="M4 9h16M9 13h6" /></svg>
               Каталог
             </Link>
-            <Link role="menuitem" to="/about" onClick={() => setIsInfoOpen(false)}>
+            <Link role="menuitem" to="/about" aria-current={location.pathname === '/about' ? 'page' : undefined} onClick={() => setIsInfoOpen(false)}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v5m0-8h.01" /></svg>
               О нас
             </Link>
-            <Link role="menuitem" to="/support" onClick={() => setIsInfoOpen(false)}>
+            <Link role="menuitem" to="/support" aria-current={location.pathname === '/support' ? 'page' : undefined} onClick={() => setIsInfoOpen(false)}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H9l-5 4V5Z" /><path d="M8 10h8m-8 4h5" /></svg>
               Техподдержка
             </Link>
-            <Link role="menuitem" to="/legal" onClick={() => setIsInfoOpen(false)}>
+            <Link role="menuitem" to="/legal" aria-current={location.pathname === '/legal' ? 'page' : undefined} onClick={() => setIsInfoOpen(false)}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6V3Z" /><path d="M14 3v5h5M9 13h7m-7 4h7" /></svg>
               Правовая информация
             </Link>
           </div>
         </div>
         {isAuthenticated && user.role === 'ADMIN' && (
-          <Link to="/admin">Админ-панель</Link>
+          <Link to="/admin" aria-current={location.pathname === '/admin' ? 'page' : undefined}>
+            Админ-панель
+          </Link>
         )}
       </nav>
 
@@ -165,6 +174,7 @@ function Header({ cartCount, favoriteCount }) {
                 <Link
                   to="/profile"
                   className="header-profile-link"
+                  aria-current={location.pathname === '/profile' ? 'page' : undefined}
                   aria-label={`Профиль: ${user.name?.trim() || user.email.split('@')[0]}`}
                 >
                   <span className="header-avatar-thumb">
@@ -178,7 +188,9 @@ function Header({ cartCount, favoriteCount }) {
                     {user.name?.trim() || user.email.split('@')[0]}
                   </span>
                 </Link>
-                <span className="account-role">{user.role}</span>
+                {user.role === 'ADMIN' && (
+                  <span className="account-role">ADMIN</span>
+                )}
               </span>
               <button
                 type="button"

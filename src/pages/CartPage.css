@@ -301,6 +301,10 @@
   font-size: 34px;
 }
 
+.cart-loading::before {
+  display: none;
+}
+
 .empty-cart h2 {
   margin: 0;
   font-size: 22px;
