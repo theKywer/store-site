@@ -302,7 +302,8 @@
 }
 
 .admin-user-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
@@ -341,6 +342,41 @@
   gap: 12px;
 }
 
+.admin-user-reviews {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #342f3e;
+}
+
+.admin-user-review {
+  padding: 12px 14px;
+  border: 1px solid #342f3e;
+  border-radius: 8px;
+  background: rgba(9, 8, 12, 0.35);
+}
+
+.admin-user-review > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 14px;
+}
+
+.admin-user-review span {
+  color: #aaa3b4;
+  font-size: 12px;
+}
+
+.admin-user-review p {
+  margin: 10px 0 0;
+  color: #d4cfdb;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .admin-user-role {
   color: #c9c3d2;
   font-size: 13px;
@@ -366,6 +402,12 @@
 .admin-user-role-button.is-promote {
   border-color: rgba(157, 117, 230, 0.45);
   background: rgba(139, 92, 246, 0.15);
+  color: #d8c6ff;
+}
+
+.admin-user-role-button.is-reviews {
+  border-color: rgba(157, 117, 230, 0.4);
+  background: rgba(139, 92, 246, 0.12);
   color: #d8c6ff;
 }
 
@@ -593,8 +635,8 @@
   }
 
   .admin-user-item {
+    grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
-    flex-direction: column;
     gap: 12px;
   }
 

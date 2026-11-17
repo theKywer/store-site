@@ -129,6 +129,10 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
   const [areUsersLoading, setAreUsersLoading] = useState(true)
   const [usersError, setUsersError] = useState(null)
   const [updatingUserId, setUpdatingUserId] = useState(null)
+  const [userReviews, setUserReviews] = useState({})
+  const [openReviewsUserId, setOpenReviewsUserId] = useState(null)
+  const [loadingReviewsUserId, setLoadingReviewsUserId] = useState(null)
+  const [userReviewsErrors, setUserReviewsErrors] = useState({})
 
   useEffect(() => {
     const controller = new AbortController()
@@ -182,6 +186,33 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
       }
     } finally {
       setUpdatingUserId(null)
+    }
+  }
+
+  async function toggleUserReviews(targetUser) {
+    if (openReviewsUserId === targetUser.id) {
+      setOpenReviewsUserId(null)
+      return
+    }
+    setOpenReviewsUserId(targetUser.id)
+    if (userReviews[targetUser.id]) return
+
+    setLoadingReviewsUserId(targetUser.id)
+    setUserReviewsErrors((current) => ({ ...current, [targetUser.id]: null }))
+    try {
+      const response = await apiFetch(`/api/admin/users/${targetUser.id}/reviews`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const reviews = await readAdminResponse(response, 'Не удалось загрузить отзывы пользователя')
+      setUserReviews((current) => ({ ...current, [targetUser.id]: reviews }))
+    } catch (requestError) {
+      if (requestError.status === 401) {
+        handleRequestError(requestError, setUsersError)
+      } else {
+        setUserReviewsErrors((current) => ({ ...current, [targetUser.id]: requestError.message }))
+      }
+    } finally {
+      setLoadingReviewsUserId(null)
     }
   }
 
@@ -863,6 +894,15 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
               </small>
             </div>
             <div className="admin-user-role-actions">
+              <button
+                type="button"
+                className="admin-user-role-button is-reviews"
+                onClick={() => toggleUserReviews(listedUser)}
+                aria-expanded={openReviewsUserId === listedUser.id}
+                disabled={loadingReviewsUserId === listedUser.id}
+              >
+                {loadingReviewsUserId === listedUser.id ? 'Загрузка…' : `Отзывы (${listedUser._count?.reviews ?? 0})`}
+              </button>
               <span className={`admin-user-role${listedUser.role === 'ADMIN' ? ' is-admin' : ''}`}>
                 {listedUser.role === 'ADMIN' ? 'Администратор' : 'Пользователь'}
               </span>
@@ -887,6 +927,19 @@ function AdminPage({ games, isLoading, error, setGames, onGameDeleted }) {
                 </button>
               )}
             </div>
+            {openReviewsUserId === listedUser.id && (
+              <div className="admin-user-reviews">
+                {loadingReviewsUserId === listedUser.id && <p className="admin-feedback is-loading">Загрузка отзывов…</p>}
+                {userReviewsErrors[listedUser.id] && <p className="admin-feedback is-error">{userReviewsErrors[listedUser.id]}</p>}
+                {userReviews[listedUser.id]?.length === 0 && <p className="admin-feedback">Пользователь ещё не оставлял отзывы.</p>}
+                {userReviews[listedUser.id]?.map((review) => (
+                  <section className="admin-user-review" key={review.id}>
+                    <div><strong>{review.game.title}</strong><span>{review.rating} из 5 · {new Date(review.createdAt).toLocaleString('ru-RU')}</span></div>
+                    <p>{review.text}</p>
+                  </section>
+                ))}
+              </div>
+            )}
           </article>
         ))}
       </AdminDisclosure>

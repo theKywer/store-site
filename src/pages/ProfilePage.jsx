@@ -257,7 +257,7 @@ function ProfilePage() {
               <span className="profile-eyebrow">PERSONAL DATA</span>
               <h2>Данные аккаунта</h2>
             </div>
-            <span className="profile-role">{profile.role === 'ADMIN' ? 'Администратор' : 'Игрок'}</span>
+            <span className="profile-role">{profile.role === 'ADMIN' ? 'Администратор' : 'Пользователь'}</span>
           </div>
 
           <form className="profile-form" onSubmit={handleNameSave}>

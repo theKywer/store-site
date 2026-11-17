@@ -970,6 +970,61 @@ app.get('/games/:id', async (req, res) => {
   }
 })
 
+// Отзывы игры и агрегированный рейтинг
+app.get('/games/:id/reviews', async (req, res) => {
+  const gameId = parsePostgresId(req.params.id)
+  if (gameId === null) return res.status(400).json({ message: 'Некорректный ID игры' })
+  const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1)
+  const limit = Math.min(50, Math.max(1, Number.parseInt(req.query.limit, 10) || 10))
+  try {
+    if (!await prisma.game.findUnique({ where: { id: gameId }, select: { id: true } })) return res.status(404).json({ message: 'Игра не найдена' })
+    const [total, aggregate, reviews] = await Promise.all([
+      prisma.review.count({ where: { gameId } }),
+      prisma.review.aggregate({ where: { gameId }, _avg: { rating: true } }),
+      prisma.review.findMany({ where: { gameId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], skip: (page - 1) * limit, take: limit, select: { id: true, userId: true, rating: true, text: true, createdAt: true, updatedAt: true, user: { select: { name: true, role: true, avatarData: true, avatarMimeType: true } } } }),
+    ])
+    res.json({ averageRating: aggregate._avg.rating || 0, total, page, limit, reviews: reviews.map(({ user, ...r }) => ({ ...r, author: { name: user.name || 'Пользователь', role: user.role, avatar: user.avatarData && user.avatarMimeType ? `data:${user.avatarMimeType};base64,${Buffer.from(user.avatarData).toString('base64')}` : null } })) })
+  } catch (error) { console.error('Ошибка отзывов:', error); res.status(500).json({ message: 'Не удалось получить отзывы' }) }
+})
+
+app.post('/games/:id/reviews', authMiddleware, async (req, res) => {
+  const gameId = parsePostgresId(req.params.id)
+  const rating = req.body?.rating
+  const text = req.body?.text
+  if (gameId === null || !Number.isInteger(rating) || rating < 1 || rating > 5 || typeof text !== 'string' || text.trim().length < 10 || text.trim().length > 1000) return res.status(400).json({ message: 'Укажите оценку от 1 до 5 и отзыв длиной от 10 до 1000 символов' })
+  try {
+    if (!await prisma.game.findUnique({ where: { id: gameId }, select: { id: true } })) return res.status(404).json({ message: 'Игра не найдена' })
+    const review = await prisma.review.create({ data: { userId: Number(req.user.id), gameId, rating, text: text.trim() }, select: { id: true, userId: true, gameId: true, rating: true, text: true, createdAt: true, updatedAt: true } })
+    res.status(201).json(review)
+  } catch (error) { if (error.code === 'P2002') return res.status(409).json({ message: 'Вы уже оставили отзыв на эту игру' }); console.error(error); res.status(500).json({ message: 'Не удалось сохранить отзыв' }) }
+})
+
+app.patch('/games/:gameId/reviews/:reviewId', authMiddleware, async (req, res) => {
+  const gameId = parsePostgresId(req.params.gameId), reviewId = parsePostgresId(req.params.reviewId)
+  const { rating, text } = req.body || {}
+  if (gameId === null || reviewId === null || !Number.isInteger(rating) || rating < 1 || rating > 5 || typeof text !== 'string' || text.trim().length < 10 || text.trim().length > 1000) return res.status(400).json({ message: 'Некорректная оценка или текст отзыва' })
+  try {
+    const review = await prisma.review.findUnique({ where: { id: reviewId } })
+    if (!review || review.gameId !== gameId) return res.status(404).json({ message: 'Отзыв не найден' })
+    if (review.userId !== Number(req.user.id)) return res.status(403).json({ message: 'Можно изменять только свой отзыв' })
+    res.json(await prisma.review.update({ where: { id: reviewId }, data: { rating, text: text.trim() }, select: { id: true, userId: true, gameId: true, rating: true, text: true, createdAt: true, updatedAt: true } }))
+  } catch (error) { console.error(error); res.status(500).json({ message: 'Не удалось обновить отзыв' }) }
+})
+
+app.delete('/games/:gameId/reviews/:reviewId', authMiddleware, async (req, res) => {
+  const gameId = parsePostgresId(req.params.gameId), reviewId = parsePostgresId(req.params.reviewId)
+  if (gameId === null || reviewId === null) return res.status(400).json({ message: 'Некорректный ID' })
+  try {
+    const review = await prisma.review.findUnique({ where: { id: reviewId } })
+    if (!review || review.gameId !== gameId) return res.status(404).json({ message: 'Отзыв не найден' })
+    if (review.userId !== Number(req.user.id)) {
+      const actor = await prisma.user.findUnique({ where: { id: Number(req.user.id) }, select: { role: true } })
+      if (actor?.role !== 'ADMIN') return res.status(403).json({ message: 'Можно удалить только свой отзыв' })
+    }
+    await prisma.review.delete({ where: { id: reviewId } }); res.status(204).end()
+  } catch (error) { console.error(error); res.status(500).json({ message: 'Не удалось удалить отзыв' }) }
+})
+
 // Добавление игры
 app.post('/games', authMiddleware, adminMiddleware, async (req, res) => {
   try {
@@ -1447,6 +1502,7 @@ app.get('/admin/users', authMiddleware, adminMiddleware, async (req, res) => {
         role: true,
         createdAt: true,
         emailVerifiedAt: true,
+        _count: { select: { reviews: true } },
       },
       orderBy: { createdAt: 'desc' },
     })
@@ -1455,6 +1511,25 @@ app.get('/admin/users', authMiddleware, adminMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Ошибка получения пользователей администратора:', error)
     res.status(500).json({ message: 'Не удалось получить список пользователей' })
+  }
+})
+
+// Просмотр отзывов выбранного пользователя в панели администратора
+app.get('/admin/users/:id/reviews', authMiddleware, adminMiddleware, async (req, res) => {
+  const userId = parsePostgresId(req.params.id)
+  if (userId === null) return res.status(400).json({ message: 'Некорректный ID пользователя' })
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } })
+    if (!user) return res.status(404).json({ message: 'Пользователь не найден' })
+    const reviews = await prisma.review.findMany({
+      where: { userId },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      select: { id: true, gameId: true, rating: true, text: true, createdAt: true, updatedAt: true, game: { select: { title: true } } },
+    })
+    res.json(reviews)
+  } catch (error) {
+    console.error('Ошибка получения отзывов пользователя:', error)
+    res.status(500).json({ message: 'Не удалось получить отзывы пользователя' })
   }
 })
 

@@ -12,7 +12,7 @@ function Header({ cartCount, favoriteCount }) {
   const infoMenuRef = useRef(null)
   const infoButtonRef = useRef(null)
   const [isInfoOpen, setIsInfoOpen] = useState(false)
-  const isInformationPage = ['/about', '/support', '/legal'].includes(location.pathname)
+  const isInformationPage = ['/about', '/support', '/legal', '/orders/my'].includes(location.pathname)
 
   useEffect(() => {
     if (!isAuthenticated || !token) {
@@ -141,6 +141,12 @@ function Header({ cartCount, favoriteCount }) {
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H9l-5 4V5Z" /><path d="M8 10h8m-8 4h5" /></svg>
               Техподдержка
             </Link>
+            {isAuthenticated && (
+              <Link role="menuitem" to="/orders/my" aria-current={location.pathname === '/orders/my' ? 'page' : undefined} onClick={() => setIsInfoOpen(false)}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v15H4zM8 9h8m-8 4h8m-8 4h5" /></svg>
+                Мои заказы
+              </Link>
+            )}
             <Link role="menuitem" to="/legal" aria-current={location.pathname === '/legal' ? 'page' : undefined} onClick={() => setIsInfoOpen(false)}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6V3Z" /><path d="M14 3v5h5M9 13h7m-7 4h7" /></svg>
               Правовая информация

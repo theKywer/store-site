@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import './GamePage.css'
+import GameReviews from '../components/GameReviews.jsx'
 
 // Получает YouTube ID из ссылки или возвращает переданный ID.
 function getYouTubeId(value) {
@@ -426,6 +427,7 @@ function GamePage({ games, onAddToCart, favoriteIds, onToggleFavorite }) {
           </div>
         </div>
       </div>
+      <GameReviews gameId={game.id} />
     </section>
   )
 }

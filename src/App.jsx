@@ -282,11 +282,15 @@ function App() {
 
   // Обновление игры в корзине после редактирования
   function handleGamesChange(updateGames) {
-    setGames(updateGames)
+    const nextGames = typeof updateGames === 'function'
+      ? updateGames(games)
+      : updateGames
+
+    setGames(nextGames)
 
     setCartItems((currentItems) =>
       currentItems.map((item) => {
-        const updatedGame = updateGames.find(
+        const updatedGame = nextGames.find(
           (game) => game.id === item.game.id,
         )
 
