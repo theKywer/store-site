@@ -73,6 +73,7 @@ const limitResendRequests = createRateLimiter({
 })
 
 app.use(express.json({ limit: '100kb' }))
+app.use('/telegram', require('./routes/telegrambot'))
 
 app.use((req, res, next) => {
   const allowedOrigin = process.env.CORS_ORIGIN

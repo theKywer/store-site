@@ -57,6 +57,8 @@ model User {
   avatarData      Bytes?
   avatarMimeType  String?
   emailVerifiedAt DateTime?
+  telegramLink      TelegramLink?
+  telegramLinkToken TelegramLinkToken?
 
   orders            Order[]
   emailVerification EmailVerification?
@@ -124,3 +126,25 @@ model OrderItemKey {
 
   orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
 }
+
+
+
+model TelegramLink {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @unique
+  telegramUserId BigInt   @unique
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TelegramLinkToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+

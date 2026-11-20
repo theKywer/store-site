@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { apiFetch } from '../api'
 import { useAuth } from '../context/auth.js'
 import './ProfilePage.css'
+import TelegramLinkPanel from '../components/TelegramLinkPanel'
 
 const MAX_AVATAR_SIZE = 2 * 1024 * 1024
 const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp']
@@ -328,6 +329,7 @@ function ProfilePage() {
           </div>
         </section>
       </div>
+      <TelegramLinkPanel token={token} />
     </section>
   )
 }
