@@ -1,6 +1,7 @@
 
 import { useMemo, useState } from 'react'
 import GameCard from '../components/GameCard'
+import TelegramBanner from '../components/TelegramBanner'
 
 /** Главная страница: поиск, фильтры, сортировка и каталог игр. */
 function Home({ games, isLoading, error, onAddToCart, favoriteIds, onToggleFavorite }) {
@@ -65,12 +66,15 @@ function Home({ games, isLoading, error, onAddToCart, favoriteIds, onToggleFavor
     <>
       <section className="hero">
         <div className="hero-content">
-          <span className="hero-label">ТВОЙ МИР ИГР</span>
+          <span className="hero-label">
+            <span className="hero-label-mark" aria-hidden="true">✦</span>
+            Своя орбита, свои игры
+          </span>
 
           <h1>
-            Открой для себя
+            Выбирай мир.
             <br />
-            <span>новые миры.</span>
+            <span>Начинай приключение.</span>
           </h1>
 
           <p className="hero-description">
@@ -85,6 +89,8 @@ function Home({ games, isLoading, error, onAddToCart, favoriteIds, onToggleFavor
           </a>
         </div>
       </section>
+
+      <TelegramBanner />
 
       <section className="catalog-section" id="discounts">
         <span className="section-label">

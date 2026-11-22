@@ -308,6 +308,39 @@ function App() {
 
   return (
     <BrowserRouter>
+      <div className="site-cosmos-backdrop" aria-hidden="true">
+        <svg className="site-cosmos-map" viewBox="0 0 1440 3200" preserveAspectRatio="none">
+          <path d="M-80 250C230 390 180 670 495 820s422 60 515 355 40 520 310 690 280 430 190 760" />
+          <path d="M1270 120c-200 170-110 380-340 530S690 930 750 1150s270 300 120 520-250 300-120 540 350 250 320 620" />
+          <path d="M105 1090c160-150 270-140 385-65m390 950c115-70 220-75 350-15" />
+          <path d="M180 520l5-13 5 13 13 5-13 5-5 13-5-13-13-5 13-5Zm920 390 4-10 4 10 10 4-10 4-4 10-4-10-10-4 10-4Zm-590 1580 4-11 4 11 11 4-11 4-4 11-4-11-11-4 11-4Z" />
+          <path d="M970 2100c60-38 112-44 165-24m-865 590c52-30 96-36 139-20" />
+          <circle cx="496" cy="820" r="3" />
+          <circle cx="1010" cy="1205" r="4" />
+          <circle cx="870" cy="1670" r="3" />
+          <circle cx="750" cy="2210" r="4" />
+          <circle cx="1070" cy="2830" r="3" />
+          <circle cx="315" cy="360" r="2" />
+          <circle cx="1180" cy="690" r="2" />
+          <circle cx="260" cy="1460" r="2" />
+          <circle cx="1120" cy="1930" r="2" />
+          <circle cx="390" cy="2500" r="2" />
+          <g className="site-cosmos-ship" transform="translate(1040 780) scale(.78) rotate(-16)">
+            <path className="site-cosmos-ship-hull" d="m3 27 25-7 17-11 28 5 34 13-34 13-28 5-17-11Z" />
+            <path className="site-cosmos-ship-wing" d="m27 20-13-13 32 6m-19 21L14 47l32-6" />
+            <path className="site-cosmos-ship-cockpit" d="m61 22 15 5-15 5-8-5Z" />
+            <path className="site-cosmos-ship-trail" d="M3 24h-7m7 6h-7" />
+            <path className="site-cosmos-ship-detail" d="m34 22 10 5-10 5m16-17 8 5m-8 20 8-5" />
+          </g>
+        </svg>
+        <span className="site-cosmos-planet site-cosmos-planet-violet"><i /></span>
+        <span className="site-cosmos-planet site-cosmos-planet-blue"><i /></span>
+        <span className="site-cosmos-planet site-cosmos-planet-ringed"><i /></span>
+        <span className="site-cosmos-planet site-cosmos-planet-distant"><i /></span>
+        <span className="site-cosmos-asteroids" />
+        <span className="site-cosmos-moonlet" />
+      </div>
+      <div className="site-shell">
       <ScrollToTop />
       <ToastViewport toasts={toasts} onDismiss={dismissToast} />
 
@@ -414,6 +447,7 @@ function App() {
       </main>
 
       <Footer />
+      </div>
     </BrowserRouter>
   )
 }

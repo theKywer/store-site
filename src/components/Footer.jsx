@@ -53,7 +53,7 @@ function Footer() {
             </a>
 
             <a
-              href="https://www.instagram.com/your_username/"
+              href="https://www.instagram.com/melancholia.js/"
               target="_blank"
               rel="noreferrer"
               aria-label="Instagram"
@@ -68,11 +68,11 @@ function Footer() {
             </a>
 
             <a
-              href="https://t.me/your_username"
+              href="https://t.me/LunaMarketGameBot"
               target="_blank"
-              rel="noreferrer"
-              aria-label="Telegram"
-              title="Telegram"
+              rel="noopener noreferrer"
+              aria-label="Telegram-бот Luna Market"
+              title="Telegram-бот"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path

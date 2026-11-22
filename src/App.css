@@ -1,6 +1,190 @@
 
 #root {
+  position: relative;
+  isolation: isolate;
   min-height: 100vh;
+}
+
+.site-cosmos-backdrop {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 4% 19%, rgba(96, 67, 151, 0.1), transparent 22%),
+    radial-gradient(ellipse at 96% 42%, rgba(58, 111, 157, 0.075), transparent 24%),
+    radial-gradient(ellipse at 7% 72%, rgba(126, 75, 160, 0.075), transparent 24%),
+    radial-gradient(ellipse at 92% 91%, rgba(82, 81, 154, 0.065), transparent 23%);
+}
+
+.site-cosmos-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  opacity: 0.28;
+  fill: rgba(198, 177, 233, 0.65);
+  stroke: rgba(164, 139, 210, 0.23);
+  stroke-width: 1;
+  stroke-dasharray: 2 10;
+}
+
+.site-cosmos-map path {
+  fill: none;
+  stroke: rgba(164, 139, 210, 0.25);
+  stroke-dasharray: 3 12;
+}
+
+.site-cosmos-map .site-cosmos-ship {
+  opacity: 0.5;
+  filter: drop-shadow(0 0 7px rgba(130, 190, 237, 0.42));
+  stroke: rgba(157, 192, 226, 0.75);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.site-cosmos-map .site-cosmos-ship-hull {
+  fill: rgba(116, 130, 166, 0.36);
+}
+
+.site-cosmos-map .site-cosmos-ship-cockpit {
+  fill: rgba(135, 211, 255, 0.72);
+  stroke: rgba(176, 227, 255, 0.9);
+}
+
+.site-cosmos-map .site-cosmos-ship-wing,
+.site-cosmos-map .site-cosmos-ship-trail,
+.site-cosmos-map .site-cosmos-ship-detail {
+  fill: none;
+}
+
+.site-cosmos-map .site-cosmos-ship-trail {
+  opacity: 0.55;
+  stroke: rgba(135, 211, 255, 0.64);
+  stroke-dasharray: 2 5;
+}
+
+.site-cosmos-map .site-cosmos-ship-detail {
+  stroke: rgba(196, 207, 223, 0.58);
+  stroke-width: 0.8;
+}
+
+.site-cosmos-planet,
+.site-cosmos-moonlet {
+  position: absolute;
+  display: block;
+  border: 1px solid rgba(206, 188, 235, 0.23);
+  border-radius: 50%;
+  background: radial-gradient(circle at 31% 27%, rgba(235, 219, 255, 0.8), rgba(149, 111, 191, 0.34) 25%, rgba(57, 43, 76, 0.78) 73%);
+  box-shadow: inset -12px -12px 22px rgba(8, 6, 14, 0.55), 0 0 34px rgba(145, 105, 198, 0.1);
+}
+
+.site-cosmos-planet i {
+  position: absolute;
+  inset: -17% -28%;
+  border: 1px solid rgba(197, 169, 231, 0.2);
+  border-radius: 50%;
+  transform: rotate(-24deg);
+}
+
+.site-cosmos-planet-violet {
+  top: 30%;
+  left: -58px;
+  width: 138px;
+  height: 138px;
+  opacity: 0.43;
+}
+
+.site-cosmos-planet-blue {
+  top: 43%;
+  right: -46px;
+  width: 112px;
+  height: 112px;
+  opacity: 0.36;
+  background: radial-gradient(circle at 32% 26%, rgba(205, 239, 255, 0.86), rgba(100, 159, 193, 0.36) 28%, rgba(31, 49, 71, 0.78) 75%);
+  box-shadow: inset -12px -12px 22px rgba(8, 6, 14, 0.55), 0 0 34px rgba(91, 170, 224, 0.11);
+}
+
+.site-cosmos-planet-blue i {
+  inset: 9% -35%;
+  border-color: rgba(137, 193, 229, 0.2);
+  transform: rotate(35deg);
+}
+
+.site-cosmos-planet-ringed {
+  top: 72%;
+  left: 8%;
+  width: 66px;
+  height: 66px;
+  opacity: 0.42;
+  background: radial-gradient(circle at 32% 27%, rgba(236, 222, 255, 0.82), rgba(129, 100, 167, 0.42) 35%, rgba(46, 37, 59, 0.82) 77%);
+}
+
+.site-cosmos-planet-ringed i {
+  inset: 16% -48%;
+  border-color: rgba(194, 163, 228, 0.26);
+  transform: rotate(-12deg);
+}
+
+.site-cosmos-planet-distant {
+  top: 31%;
+  right: 15%;
+  width: 45px;
+  height: 45px;
+  opacity: 0.35;
+  background: radial-gradient(circle at 30% 25%, rgba(237, 222, 255, 0.84), rgba(151, 117, 187, 0.42) 42%, rgba(54, 44, 72, 0.8) 78%);
+}
+
+.site-cosmos-planet-distant i {
+  inset: -18% -38%;
+  border-color: rgba(193, 169, 224, 0.22);
+  transform: rotate(28deg);
+}
+
+.site-cosmos-asteroids {
+  position: absolute;
+  top: 61%;
+  left: 12%;
+  width: 132px;
+  height: 30px;
+  border: 1px solid rgba(187, 164, 216, 0.17);
+  border-radius: 50%;
+  opacity: 0.4;
+  transform: rotate(-22deg);
+  background-image:
+    radial-gradient(circle, rgba(210, 193, 231, 0.65) 1px, transparent 1.8px),
+    radial-gradient(circle, rgba(151, 179, 211, 0.56) 1px, transparent 1.8px);
+  background-position: 7px 5px, 18px 14px;
+  background-size: 23px 17px, 31px 21px;
+}
+
+.site-cosmos-moonlet {
+  top: 88%;
+  right: 14%;
+  width: 42px;
+  height: 42px;
+  opacity: 0.34;
+  background: radial-gradient(circle at 30% 27%, rgba(247, 239, 255, 0.9), rgba(172, 151, 198, 0.42) 42%, rgba(59, 51, 72, 0.82) 78%);
+}
+
+.site-shell {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 650px) {
+  .site-cosmos-map { opacity: 0.17; }
+
+  .site-cosmos-planet-violet,
+  .site-cosmos-planet-blue { opacity: 0.2; }
+
+  .site-cosmos-planet-ringed,
+  .site-cosmos-planet-distant,
+  .site-cosmos-moonlet,
+  .site-cosmos-asteroids { opacity: 0.2; }
 }
 
 /* HEADER */
@@ -448,6 +632,8 @@
   content: '';
   opacity: 0;
   pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.18) 20%, rgba(0, 0, 0, 0.52) 38%, rgba(0, 0, 0, 0.85) 55%, #000 70%);
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.18) 20%, rgba(0, 0, 0, 0.52) 38%, rgba(0, 0, 0, 0.85) 55%, #000 70%);
   animation: hero-art-fade-in 3.2s ease-out forwards;
 }
 
@@ -475,6 +661,27 @@
   letter-spacing: 2px;
 }
 
+.hero-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 13px;
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  border-radius: 999px;
+  background: rgba(60, 43, 82, 0.42);
+  box-shadow: inset 0 0 18px rgba(167, 139, 250, 0.045);
+  color: #d5c2ff;
+  font-size: 10px;
+  letter-spacing: 0.13em;
+}
+
+.hero-label-mark {
+  color: #b6dfff;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 10px rgba(151, 203, 255, 0.8);
+}
+
 .hero h1 {
   margin: 24px 0;
   font-size: clamp(42px, 6vw, 68px);
@@ -483,7 +690,11 @@
 }
 
 .hero h1 span {
-  color: var(--color-purple-hover);
+  background: linear-gradient(100deg, #c7a4ff 8%, #a98aff 52%, #9dd8ff 100%);
+  background-clip: text;
+  color: transparent;
+  -webkit-background-clip: text;
+  filter: drop-shadow(0 0 18px rgba(152, 112, 235, 0.2));
 }
 
 .hero-description {
@@ -1016,6 +1227,8 @@
   }
 
   .hero::before {
+    -webkit-mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0.62) 18%, rgba(0, 0, 0, 0.9) 34%, #000 48%);
+    mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0.62) 18%, rgba(0, 0, 0, 0.9) 34%, #000 48%);
     background-image:
       linear-gradient(
         90deg,
