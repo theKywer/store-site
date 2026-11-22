@@ -1,0 +1,2 @@
+ALTER TABLE "TelegramLink"
+ADD COLUMN "notifyOrders" BOOLEAN NOT NULL DEFAULT true;

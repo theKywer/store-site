@@ -41,13 +41,47 @@ router.get('/status', authMiddleware, async (req, res) => {
   try {
     const link = await prisma.telegramLink.findUnique({
       where: { userId: req.user.id },
-      select: { id: true },
+      select: { id: true, notifyOrders: true },
     })
 
-    res.json({ linked: Boolean(link) })
+    res.json({
+      linked: Boolean(link),
+      orders: link?.notifyOrders ?? true,
+    })
   } catch (error) {
     console.error('Telegram status:', error)
     res.status(500).json({ message: 'Ошибка проверки привязки' })
+  }
+})
+
+// Сохраняем настройку уведомлений для привязанного Telegram
+router.patch('/notifications', authMiddleware, async (req, res) => {
+  if (
+    !req.body ||
+    typeof req.body !== 'object' ||
+    Array.isArray(req.body) ||
+    typeof req.body.orders !== 'boolean'
+  ) {
+    return res.status(400).json({
+      message: 'Поле orders должно быть логическим значением',
+    })
+  }
+
+  try {
+    const link = await prisma.telegramLink.update({
+      where: { userId: req.user.id },
+      data: { notifyOrders: req.body.orders },
+      select: { notifyOrders: true },
+    })
+
+    res.json({ orders: link.notifyOrders })
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ message: 'Telegram не подключён' })
+    }
+
+    console.error('Telegram notifications:', error.code || error.name || 'UnknownError')
+    res.status(500).json({ message: 'Не удалось сохранить настройки уведомлений' })
   }
 })
 

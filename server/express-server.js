@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken')
 const express = require('express')
 const bcrypt = require('bcrypt')
 const prisma = require('./prisma')
+const { notifyTelegramOrder } = require('./telegram/notify')
 const { getEmailJsConfig, sendVerificationEmail } = require('./email/emailjsClient')
 
 const app = express()
@@ -1285,6 +1286,8 @@ app.post('/orders', authMiddleware, async (req, res) => {
       })
     })
 
+    void notifyTelegramOrder(order)
+
     res.status(201).json({
       message: 'Заказ успешно создан',
       order,
@@ -1416,6 +1419,10 @@ app.post('/orders/:id/pay', authMiddleware, async (req, res) => {
           throw error
         }
       }
+    }
+
+    if (order?.status === 'PAID') {
+      void notifyTelegramOrder(order)
     }
 
     res.json({
@@ -1661,6 +1668,8 @@ app.patch('/admin/orders/:id/cancel', authMiddleware, adminMiddleware, async (re
         },
       },
     })
+
+    void notifyTelegramOrder(order)
 
     res.json({
       message: 'Заказ отменён',
