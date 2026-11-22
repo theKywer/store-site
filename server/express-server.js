@@ -73,25 +73,35 @@ const limitResendRequests = createRateLimiter({
   message: 'Слишком много запросов кода. Попробуйте позже.',
 })
 
-app.use(express.json({ limit: '100kb' }))
-app.use('/telegram', require('./routes/telegrambot'))
-
+// Apply CORS before body parsing and every route so preflights and error responses
+// receive the same headers as successful API responses.
 app.use((req, res, next) => {
-  const allowedOrigin = process.env.CORS_ORIGIN
+  const allowedOrigins = (process.env.CORS_ORIGIN || '')
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/$/, ''))
+    .filter(Boolean)
+  const requestOrigin = typeof req.headers.origin === 'string'
+    ? req.headers.origin.replace(/\/$/, '')
+    : ''
 
-  if (allowedOrigin && req.headers.origin === allowedOrigin) {
-    res.setHeader('Access-Control-Allow-Origin', allowedOrigin)
-    res.setHeader('Vary', 'Origin')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  res.vary('Origin')
+
+  if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', requestOrigin)
+    res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type')
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+    res.setHeader('Access-Control-Max-Age', '600')
   }
 
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(204)
+    return res.status(204).end()
   }
 
   next()
 })
+
+app.use(express.json({ limit: '100kb' }))
+app.use('/telegram', require('./routes/telegrambot'))
 
 app.use((error, req, res, next) => {
   if (error.type === 'entity.parse.failed') {

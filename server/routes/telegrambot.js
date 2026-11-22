@@ -13,6 +13,11 @@ function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex')
 }
 
+function logTelegramError(context, error) {
+  // Log only a stable category/code, never request bodies, tokens or database URLs.
+  console.error(`Telegram ${context}:`, error?.code || error?.name || 'UnknownError')
+}
+
 // Доступ только для нашего Python-бота
 function botAuth(req, res, next) {
   const expected = process.env.TELEGRAM_BRIDGE_SECRET
@@ -49,7 +54,7 @@ router.get('/status', authMiddleware, async (req, res) => {
       orders: link?.notifyOrders ?? true,
     })
   } catch (error) {
-    console.error('Telegram status:', error)
+    logTelegramError('status', error)
     res.status(500).json({ message: 'Ошибка проверки привязки' })
   }
 })
@@ -80,7 +85,7 @@ router.patch('/notifications', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'Telegram не подключён' })
     }
 
-    console.error('Telegram notifications:', error.code || error.name || 'UnknownError')
+    logTelegramError('notifications', error)
     res.status(500).json({ message: 'Не удалось сохранить настройки уведомлений' })
   }
 })
@@ -133,7 +138,7 @@ router.post('/link-token', authMiddleware, async (req, res) => {
 
     res.json({ token, expiresAt })
   } catch (error) {
-    console.error('Telegram link-token:', error)
+    logTelegramError('link-token', error)
     res.status(500).json({ message: 'Не удалось создать ссылку' })
   }
 })
@@ -213,7 +218,7 @@ router.post('/consume', botAuth, async (req, res) => {
       })
     }
 
-    console.error('Telegram consume:', error)
+    logTelegramError('consume', error)
     res.status(500).json({ message: 'Ошибка привязки' })
   }
 })
@@ -232,7 +237,7 @@ router.delete('/link', authMiddleware, async (req, res) => {
 
     res.json({ linked: false })
   } catch (error) {
-    console.error('Telegram unlink:', error)
+    logTelegramError('unlink', error)
     res.status(500).json({ message: 'Не удалось отключить Telegram' })
   }
 })
@@ -309,7 +314,7 @@ router.post('/orders', botAuth, async (req, res) => {
 
     res.json({ orders })
   } catch (error) {
-    console.error('Ошибка Telegram orders:', error)
+    logTelegramError('orders', error)
 
     res.status(500).json({
       message: 'Не удалось получить заказы',
