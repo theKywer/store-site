@@ -203,4 +203,85 @@ router.delete('/link', authMiddleware, async (req, res) => {
   }
 })
 
+
+/**
+ * Получение заказов пользователя через Telegram.
+ * Доступ разрешён только нашему Python-боту.
+ */
+router.post('/orders', botAuth, async (req, res) => {
+  res.set('Cache-Control', 'no-store')
+
+  const telegramUserId = req.body?.telegramUserId
+
+  if (
+    typeof telegramUserId !== 'string' ||
+    !/^[1-9]\d{0,19}$/.test(telegramUserId)
+  ) {
+    return res.status(400).json({
+      message: 'Некорректный Telegram ID',
+    })
+  }
+
+  const telegramId = BigInt(telegramUserId)
+
+  if (telegramId > 9223372036854775807n) {
+    return res.status(400).json({
+      message: 'Некорректный Telegram ID',
+    })
+  }
+
+  try {
+    // Определяем владельца привязанного Telegram
+    const link = await prisma.telegramLink.findUnique({
+      where: {
+        telegramUserId: telegramId,
+      },
+      select: {
+        userId: true,
+      },
+    })
+
+    if (!link) {
+      return res.status(404).json({
+        code: 'TELEGRAM_NOT_LINKED',
+        message: 'Telegram не привязан к аккаунту',
+      })
+    }
+
+    // Получаем только заказы этого пользователя
+    const orders = await prisma.order.findMany({
+      where: {
+        userId: link.userId,
+      },
+      orderBy: [
+        { createdAt: 'desc' },
+        { id: 'desc' },
+      ],
+      take: 20,
+      select: {
+        id: true,
+        status: true,
+        totalAmount: true,
+        createdAt: true,
+        items: {
+          select: {
+            gameTitle: true,
+            quantity: true,
+            unitPrice: true,
+          },
+        },
+      },
+    })
+
+    res.json({ orders })
+  } catch (error) {
+    console.error('Ошибка Telegram orders:', error)
+
+    res.status(500).json({
+      message: 'Не удалось получить заказы',
+    })
+  }
+})
+
+
 module.exports = router
